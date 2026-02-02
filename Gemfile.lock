@@ -6,10 +6,12 @@ GEM
     bigdecimal (4.0.1)
     diff-lcs (1.6.2)
     json (2.7.6)
+    matrix (0.4.3)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
     mysql2 (0.5.7)
       bigdecimal
+    ostruct (0.6.3)
     parallel (1.24.0)
     parser (3.3.10.1)
       ast (~> 2.4.1)
@@ -63,7 +65,9 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  matrix (~> 0.4)
   mysql2 (~> 0.5)
+  ostruct (~> 0.6)
   rake (~> 13.0)
   rspec (~> 3.0)
   rubocop (~> 1.0)
@@ -71,4 +75,4 @@ DEPENDENCIES
   webrick (~> 1.8)
 
 BUNDLED WITH
-  2.4.22
+   2.4.22
