@@ -51,6 +51,23 @@ Run the command-line analysis:
 ruby main.rb
 ```
 
+## Hosting (Render or Railway)
+
+This project includes a Procfile and Rack config so it can be deployed to common Ruby hosts.
+
+### Render (recommended)
+
+1. Create a new **Web Service** from your GitHub repo.
+2. Set **Build Command**: `bundle install`
+3. Set **Start Command**: `bundle exec rackup -p $PORT -o 0.0.0.0`
+4. Deploy. Render will provide a public URL.
+
+### Railway
+
+1. Create a new service from GitHub.
+2. Use **Start Command**: `bundle exec rackup -p $PORT -o 0.0.0.0`
+3. Deploy and use the generated URL.
+
 ### Running Tests
 
 ```bash
