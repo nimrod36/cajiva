@@ -1,0 +1,11 @@
+# frozen_string_literal: true
+
+AllCops:
+  TargetRubyVersion: 2.7
+  SuggestExtensions: false
+
+Metrics/AbcSize:
+  Max: 30
+
+Metrics/MethodLength:
+  Max: 15
