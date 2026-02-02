@@ -1,17 +1,27 @@
 # frozen_string_literal: true
 
+require 'matrix'
+
 module Cajiva
   # Performs linear regression analysis on data points
   class LinearRegression
     attr_reader :slope, :intercept, :r_squared
 
-    def initialize(x_values, y_values)
+    def initialize(x_values, y_values, method: :matrix)
       @x_values = x_values
       @y_values = y_values
       @slope = 0
       @intercept = 0
       @r_squared = 0
-      calculate_regression
+
+      case method
+      when :matrix
+        calculate_regression_matrix
+      when :formula
+        calculate_regression_formula
+      else
+        calculate_regression_matrix
+      end
     end
 
     def predict(input_x)
@@ -25,7 +35,29 @@ module Cajiva
 
     private
 
-    def calculate_regression
+    # Matrix projection method: β = (X'X)^(-1)X'y
+    # Where X is design matrix [1, x] and β = [intercept, slope]
+    def calculate_regression_matrix
+      # Build design matrix X with column of 1s and x values
+      x_matrix = Matrix.build(@x_values.length, 2) do |row, col|
+        col.zero? ? 1 : @x_values[row]
+      end
+
+      # Convert y to column vector
+      y_matrix = Matrix.column_vector(@y_values)
+
+      # Normal equation: β = (X'X)^(-1)X'y
+      xt_x = x_matrix.transpose * x_matrix
+      xt_y = x_matrix.transpose * y_matrix
+      beta = xt_x.inverse * xt_y
+
+      @intercept = beta[0, 0]
+      @slope = beta[1, 0]
+      calculate_r_squared
+    end
+
+    # Traditional formula method (faster, no matrix operations)
+    def calculate_regression_formula
       n = @x_values.length
       sum_x = @x_values.sum
       sum_y = @y_values.sum
