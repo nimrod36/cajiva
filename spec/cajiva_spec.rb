@@ -9,6 +9,6 @@ describe 'Cajiva' do
   end
 
   it 'displays welcome message' do
-    expect { load File.join(__dir__, '..', 'main') }.not_to raise_error
+    expect { load File.join(__dir__, '..', 'main.rb') }.not_to raise_error
   end
 end
