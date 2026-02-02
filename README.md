@@ -1,13 +1,20 @@
-# Cajiva - DevOps CI/CD Pipeline
+# Cajiva - Linear Regression Analysis Tool
 
-A Ruby-based DevOps project demonstrating automated testing and quality checks through git hooks and CI/CD pipelines.
+A Ruby-based data analysis application that performs linear regression on temperature data with an interactive web visualization. Features automated testing, CI/CD pipelines, and dual regression methods (matrix projection and formula-based).
 
 ## Features
 
+### Core Functionality
+- **Linear Regression**: Implements least-squares regression with both matrix projection and traditional formula methods
+- **JSON Data Source**: Temperature data for Tel Aviv (June 2024) stored in JSON format
+- **Web UI**: Interactive Chart.js visualization showing temperature trends and regression line
+- **API**: RESTful endpoint serving regression data
+
+### Code Quality & DevOps
 - **Git Hooks**: Automatic test and linting on commit and push
 - **GitHub Actions CI**: Continuous integration across multiple Ruby versions
-- **Test Suite**: RSpec-based testing framework
-- **Code Quality**: RuboCop linting
+- **Test Suite**: Comprehensive RSpec tests with 10 examples
+- **Code Quality**: RuboCop linting with custom configuration
 
 ## Setup
 
@@ -19,7 +26,29 @@ A Ruby-based DevOps project demonstrating automated testing and quality checks t
 
 ```bash
 bundle install
-chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+```
+
+### Running the Web Application
+
+Start the Sinatra server:
+
+```bash
+ruby app.rb
+```
+
+Then open your browser to http://localhost:4567
+
+The web UI displays:
+- Interactive scatter plot of temperature data
+- Overlaid linear regression line
+- Statistics: slope, R², equation, and data point count
+
+### Running the CLI
+
+Run the command-line analysis:
+
+```bash
+ruby main.rb
 ```
 
 ### Running Tests
@@ -32,6 +61,61 @@ bundle exec rspec
 
 ```bash
 bundle exec rubocop
+```
+
+## Project Structure
+
+```
+cajiva/
+├── app.rb                    # Sinatra web server
+├── main.rb                   # CLI application
+├── lib/
+│   ├── linear_regression.rb  # Regression algorithms (matrix & formula)
+│   ├── json_data_fetcher.rb  # Data loading from JSON
+│   ├── database_connection.rb # MySQL support (optional)
+│   └── version.rb            # Version info
+├── data/
+│   └── temperature_data.json # Sample temperature dataset
+├── public/
+│   └── index.html           # Web UI with Chart.js
+└── spec/                    # RSpec tests
+```
+
+## Linear Regression Methods
+
+The application supports two calculation methods:
+
+### 1. Matrix Projection (default)
+Uses the normal equation: **β = (X'X)^(-1)X'y**
+
+```ruby
+model = Cajiva::LinearRegression.new(x, y)
+```
+
+### 2. Traditional Formula
+Faster computation using direct formulas:
+
+```ruby
+model = Cajiva::LinearRegression.new(x, y, method: :formula)
+```
+
+Both methods produce identical results. The formula method is recommended for large datasets due to O(n) complexity vs O(n²-n³) for matrix operations.
+
+## API Endpoints
+
+### GET /api/data
+
+Returns JSON with temperature data and regression analysis:
+
+```json
+{
+  "actual": [{"x": 1, "y": 28.5}, ...],
+  "regression": [{"x": 1, "y": 30.17}, ...],
+  "equation": "y = 0.2008x + 29.9736",
+  "r_squared": 0.8152,
+  "slope": 0.2008,
+  "intercept": 29.9736
+}
 ```
 
 ## Git Hooks
