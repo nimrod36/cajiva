@@ -18,9 +18,6 @@ puts ''
 # Example usage
 fetcher = Cajiva::JsonDataFetcher.new
 x, y = fetcher.fetch_temperature_data('Tel Aviv', 6, 2024)
-p y
-p '%%%%%%%%%%%%'
-p x
 
 model = Cajiva::LinearRegression.new(x, y)
 

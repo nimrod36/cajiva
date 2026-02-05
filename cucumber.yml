@@ -1,0 +1,1 @@
+default: --require specs --publish-quiet --format pretty

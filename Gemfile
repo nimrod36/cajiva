@@ -10,3 +10,8 @@ gem 'rspec', '~> 3.0'
 gem 'rubocop', '~> 1.0', require: false
 gem 'sinatra', '~> 3.0'
 gem 'webrick', '~> 1.8'
+
+# BDD Testing
+gem 'cucumber', '~> 5.0'
+gem 'ffi', '~> 1.15.0'
+gem 'rack-test', '~> 1.1'
