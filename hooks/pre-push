@@ -1,0 +1,26 @@
+#!/bin/bash
+# Pre-push hook: Run full test suite before push
+
+echo "🚀 Running pre-push checks..."
+echo ""
+
+# Run RSpec tests
+echo "Running RSpec test suite..."
+bundle exec rspec --fail-fast
+if [ $? -ne 0 ]; then
+  echo "❌ RSpec tests failed! Push aborted."
+  exit 1
+fi
+
+# Run Cucumber tests
+echo ""
+echo "Running Cucumber test suite..."
+bundle exec cucumber specs/ --fail-fast
+if [ $? -ne 0 ]; then
+  echo "❌ Cucumber tests failed! Push aborted."
+  exit 1
+fi
+
+echo ""
+echo "✅ All tests passed! Ready to push."
+exit 0

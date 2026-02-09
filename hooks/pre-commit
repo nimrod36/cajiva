@@ -1,0 +1,35 @@
+#!/bin/bash
+# Pre-commit hook: Run tests and linting before commit
+
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Run RSpec tests
+echo "Running RSpec tests..."
+bundle exec rspec
+if [ $? -ne 0 ]; then
+  echo "❌ RSpec tests failed! Commit aborted."
+  exit 1
+fi
+
+# Run Cucumber tests
+echo ""
+echo "Running Cucumber tests..."
+bundle exec cucumber specs/
+if [ $? -ne 0 ]; then
+  echo "❌ Cucumber tests failed! Commit aborted."
+  exit 1
+fi
+
+# Run RuboCop linting
+echo ""
+echo "Running linter..."
+bundle exec rubocop
+if [ $? -ne 0 ]; then
+  echo "❌ Linting failed! Commit aborted."
+  exit 1
+fi
+
+echo ""
+echo "✅ All pre-commit checks passed!"
+exit 0
