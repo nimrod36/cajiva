@@ -239,7 +239,7 @@ end
 Then('the predicted value should be reasonable and within the data range') do
   expect(@prediction).to be_a(Numeric)
   # Prediction should be within reasonable bounds
-  expect(@prediction).to be.positive?
+  expect(@prediction).to be_positive
   expect(@prediction).to be < 100
 end
 
