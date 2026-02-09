@@ -8,12 +8,17 @@ A Ruby-based data analysis application that performs linear regression on temper
 - **Linear Regression**: Implements least-squares regression with both matrix projection and traditional formula methods
 - **JSON Data Source**: Temperature data for Tel Aviv (June 2024) stored in JSON format
 - **Web UI**: Interactive Chart.js visualization showing temperature trends and regression line
-- **API**: RESTful endpoint serving regression data
+  - **Add Data Points**: Users can add custom temperature readings through the UI
+  - **Recalculate Regression**: Dynamically recalculate the regression line with new data points
+  - **Real-time Updates**: Chart updates immediately when data is added
+- **API**: RESTful endpoints serving regression data
+  - GET `/api/data`: Returns initial temperature data with regression
+  - POST `/api/calculate`: Accepts custom data points and returns new regression analysis
 
 ### Code Quality & DevOps
 - **Git Hooks**: Automatic test and linting on commit and push
 - **GitHub Actions CI**: Continuous integration across multiple Ruby versions
-- **Test Suite**: Comprehensive RSpec tests with 10 examples
+- **Test Suite**: Comprehensive RSpec tests with 15 examples
 - **Code Quality**: RuboCop linting with custom configuration
 
 ## Setup
@@ -42,6 +47,9 @@ The web UI displays:
 - Interactive scatter plot of temperature data
 - Overlaid linear regression line
 - Statistics: slope, R², equation, and data point count
+- **Input form** to add new data points (day and temperature)
+- **Add Point button** to add custom temperature readings to the chart
+- **Recalculate Regression Line button** to recompute the regression with all data points
 
 ### Running the CLI
 
@@ -132,6 +140,33 @@ Returns JSON with temperature data and regression analysis:
   "r_squared": 0.8152,
   "slope": 0.2008,
   "intercept": 29.9736
+}
+```
+
+### POST /api/calculate
+
+Accepts custom data points and returns new regression analysis:
+
+**Request:**
+```json
+{
+  "data": [
+    {"x": 1, "y": 28.5},
+    {"x": 2, "y": 29.1},
+    {"x": 3, "y": 29.8}
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "actual": [{"x": 1, "y": 28.5}, {"x": 2, "y": 29.1}, {"x": 3, "y": 29.8}],
+  "regression": [{"x": 1, "y": 28.5}, {"x": 2, "y": 29.1}, {"x": 3, "y": 29.8}],
+  "equation": "y = 0.65x + 27.85",
+  "r_squared": 1.0,
+  "slope": 0.65,
+  "intercept": 27.85
 }
 ```
 
