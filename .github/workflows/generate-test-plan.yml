@@ -22,83 +22,194 @@ jobs:
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           
-          # Create test plan content
-          cat > test_plan.md << 'EOF'
-          ## Test Plan for Issue #$ISSUE_NUMBER
+          # Detect issue type from title and body
+          ISSUE_TYPE="feature"
+          if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "bug\|error\|crash\|fail\|broken\|fix"; then
+            ISSUE_TYPE="bug"
+          elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "performance\|slow\|optimize\|speed"; then
+            ISSUE_TYPE="performance"
+          elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "ui\|ux\|interface\|design\|layout"; then
+            ISSUE_TYPE="ui"
+          fi
           
-          **Issue Title:** $ISSUE_TITLE
+          # Generate dynamic test plan based on issue type
+          case $ISSUE_TYPE in
+            bug)
+              cat > test_plan.md << 'EOF'
+          ## 🐛 Bug Fix Test Plan - Issue #$ISSUE_NUMBER
           
-          ### 1. Test Objectives
-          - Verify the issue requirements are met
+          **Issue:** $ISSUE_TITLE
+          
+          ### Test Objectives
+          - Reproduce the bug described in the issue
+          - Verify the fix resolves the problem
           - Ensure no regressions are introduced
-          - Validate edge cases and error handling
           
-          ### 2. Test Scope
-          **In Scope:**
-          - Functionality described in the issue
-          - Related unit tests
-          - Integration tests if applicable
+          ### Test Cases
           
-          **Out of Scope:**
-          - Unrelated features
-          - Performance testing (unless specified)
+          #### TC1: Reproduce Original Bug
+          - **Steps:** Follow reproduction steps from issue
+          - **Expected:** Bug is confirmed reproducible before fix
+          - **Priority:** Critical
           
-          ### 3. Test Cases
+          #### TC2: Verify Bug Fix
+          - **Steps:** Apply fix and retest reproduction steps
+          - **Expected:** Bug no longer occurs
+          - **Priority:** Critical
           
-          #### Test Case 1: Happy Path
-          - **Preconditions:** System is in normal state
-          - **Steps:** 
-            1. Execute the main functionality
-            2. Verify expected output
-          - **Expected Result:** Feature works as described
+          #### TC3: Regression Testing
+          - **Steps:** Test related functionality
+          - **Expected:** No new issues introduced
           - **Priority:** High
           
-          #### Test Case 2: Edge Cases
-          - **Preconditions:** Test boundary conditions
-          - **Steps:**
-            1. Test with minimum values
-            2. Test with maximum values
-            3. Test with invalid inputs
-          - **Expected Result:** System handles edge cases gracefully
+          #### TC4: Edge Cases
+          - **Steps:** Test boundary conditions related to the bug
+          - **Expected:** Fix works in all scenarios
           - **Priority:** Medium
           
-          #### Test Case 3: Error Handling
-          - **Preconditions:** Invalid input or error state
-          - **Steps:**
-            1. Trigger error condition
-            2. Verify error message
-          - **Expected Result:** Appropriate error handling
-          - **Priority:** Medium
-          
-          ### 4. Test Environment
-          - Development environment
-          - Staging environment (if applicable)
-          - Production-like configuration
-          
-          ### 5. Test Data
-          - Use representative data sets
-          - Include edge case data
-          - Test with empty/null values
-          
-          ### 6. Acceptance Criteria
-          - [ ] All test cases pass
-          - [ ] Code coverage maintained or improved
-          - [ ] No breaking changes to existing functionality
-          - [ ] Documentation updated if needed
-          
-          ### 7. Risks and Mitigations
-          - **Risk:** Implementation may affect existing features
-          - **Mitigation:** Run full regression test suite
-          
-          ### 8. Exit Criteria
-          - All high-priority test cases pass
-          - No critical defects remain
-          - Code review completed
-          - Tests added to CI/CD pipeline
+          ### Acceptance Criteria
+          - [ ] Bug is reproducible before fix
+          - [ ] Bug is resolved after fix
+          - [ ] No regression in related features
+          - [ ] Unit/integration tests added
           
           ---
-          *This test plan was automatically generated. Please review and customize as needed.*
+          *Auto-generated bug fix test plan. Detected keywords: bug, error, fix*
           EOF
+              ;;
+              
+            performance)
+              cat > test_plan.md << 'EOF'
+          ## ⚡ Performance Test Plan - Issue #$ISSUE_NUMBER
+          
+          **Issue:** $ISSUE_TITLE
+          
+          ### Test Objectives
+          - Measure baseline performance
+          - Verify performance improvements
+          - Ensure no functionality regression
+          
+          ### Test Cases
+          
+          #### TC1: Baseline Measurement
+          - **Steps:** Measure current performance metrics
+          - **Expected:** Documented baseline values
+          - **Priority:** High
+          
+          #### TC2: Performance Improvement
+          - **Steps:** Apply optimization and remeasure
+          - **Expected:** Measurable improvement in target metrics
+          - **Priority:** Critical
+          
+          #### TC3: Load Testing
+          - **Steps:** Test under various load conditions
+          - **Expected:** Consistent performance across loads
+          - **Priority:** Medium
+          
+          #### TC4: Resource Usage
+          - **Steps:** Monitor CPU, memory, network usage
+          - **Expected:** Resource usage within acceptable limits
+          - **Priority:** Medium
+          
+          ### Acceptance Criteria
+          - [ ] Performance improvement quantified
+          - [ ] No functionality regression
+          - [ ] Resource usage acceptable
+          - [ ] Benchmarks documented
+          
+          ---
+          *Auto-generated performance test plan. Detected keywords: performance, optimize*
+          EOF
+              ;;
+              
+            ui)
+              cat > test_plan.md << 'EOF'
+          ## 🎨 UI/UX Test Plan - Issue #$ISSUE_NUMBER
+          
+          **Issue:** $ISSUE_TITLE
+          
+          ### Test Objectives
+          - Verify visual design matches requirements
+          - Test user interactions and workflows
+          - Ensure responsive design works
+          
+          ### Test Cases
+          
+          #### TC1: Visual Design
+          - **Steps:** Compare implementation with design specs
+          - **Expected:** Visual elements match requirements
+          - **Priority:** High
+          
+          #### TC2: User Interactions
+          - **Steps:** Test all interactive elements
+          - **Expected:** All interactions work smoothly
+          - **Priority:** Critical
+          
+          #### TC3: Responsive Design
+          - **Steps:** Test on mobile, tablet, desktop
+          - **Expected:** Layout adapts properly to all screen sizes
+          - **Priority:** High
+          
+          #### TC4: Accessibility
+          - **Steps:** Test with screen readers, keyboard navigation
+          - **Expected:** UI is accessible to all users
+          - **Priority:** Medium
+          
+          ### Acceptance Criteria
+          - [ ] Visual design approved
+          - [ ] All interactions working
+          - [ ] Responsive on all devices
+          - [ ] Accessibility standards met
+          
+          ---
+          *Auto-generated UI/UX test plan. Detected keywords: ui, ux, interface*
+          EOF
+              ;;
+              
+            *)
+              cat > test_plan.md << 'EOF'
+          ## ✨ Feature Test Plan - Issue #$ISSUE_NUMBER
+          
+          **Issue:** $ISSUE_TITLE
+          
+          ### Test Objectives
+          - Verify feature requirements are met
+          - Validate integration with existing code
+          - Ensure quality and maintainability
+          
+          ### Test Cases
+          
+          #### TC1: Core Functionality
+          - **Steps:** Test main feature implementation
+          - **Expected:** Feature works as described in issue
+          - **Priority:** Critical
+          
+          #### TC2: Integration
+          - **Steps:** Test feature with existing functionality
+          - **Expected:** Seamless integration, no conflicts
+          - **Priority:** High
+          
+          #### TC3: Edge Cases
+          - **Steps:** Test boundary conditions and unusual inputs
+          - **Expected:** Feature handles edge cases gracefully
+          - **Priority:** Medium
+          
+          #### TC4: Error Handling
+          - **Steps:** Test with invalid inputs and error conditions
+          - **Expected:** Appropriate error messages displayed
+          - **Priority:** Medium
+          
+          ### Acceptance Criteria
+          - [ ] All requirements from issue implemented
+          - [ ] Tests pass (unit + integration)
+          - [ ] Code reviewed and approved
+          - [ ] Documentation updated
+          
+          ---
+          *Auto-generated feature test plan*
+          EOF
+              ;;
+          esac
           
           # Replace variables in the test plan
           sed -i "s/\$ISSUE_NUMBER/$ISSUE_NUMBER/g" test_plan.md
