@@ -1,0 +1,131 @@
+name: Generate Test Plan for Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  generate-test-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Generate Test Plan
+        id: generate
+        run: |
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          
+          # Create test plan content
+          cat > test_plan.md << 'EOF'
+          ## Test Plan for Issue #$ISSUE_NUMBER
+          
+          **Issue Title:** $ISSUE_TITLE
+          
+          ### 1. Test Objectives
+          - Verify the issue requirements are met
+          - Ensure no regressions are introduced
+          - Validate edge cases and error handling
+          
+          ### 2. Test Scope
+          **In Scope:**
+          - Functionality described in the issue
+          - Related unit tests
+          - Integration tests if applicable
+          
+          **Out of Scope:**
+          - Unrelated features
+          - Performance testing (unless specified)
+          
+          ### 3. Test Cases
+          
+          #### Test Case 1: Happy Path
+          - **Preconditions:** System is in normal state
+          - **Steps:** 
+            1. Execute the main functionality
+            2. Verify expected output
+          - **Expected Result:** Feature works as described
+          - **Priority:** High
+          
+          #### Test Case 2: Edge Cases
+          - **Preconditions:** Test boundary conditions
+          - **Steps:**
+            1. Test with minimum values
+            2. Test with maximum values
+            3. Test with invalid inputs
+          - **Expected Result:** System handles edge cases gracefully
+          - **Priority:** Medium
+          
+          #### Test Case 3: Error Handling
+          - **Preconditions:** Invalid input or error state
+          - **Steps:**
+            1. Trigger error condition
+            2. Verify error message
+          - **Expected Result:** Appropriate error handling
+          - **Priority:** Medium
+          
+          ### 4. Test Environment
+          - Development environment
+          - Staging environment (if applicable)
+          - Production-like configuration
+          
+          ### 5. Test Data
+          - Use representative data sets
+          - Include edge case data
+          - Test with empty/null values
+          
+          ### 6. Acceptance Criteria
+          - [ ] All test cases pass
+          - [ ] Code coverage maintained or improved
+          - [ ] No breaking changes to existing functionality
+          - [ ] Documentation updated if needed
+          
+          ### 7. Risks and Mitigations
+          - **Risk:** Implementation may affect existing features
+          - **Mitigation:** Run full regression test suite
+          
+          ### 8. Exit Criteria
+          - All high-priority test cases pass
+          - No critical defects remain
+          - Code review completed
+          - Tests added to CI/CD pipeline
+          
+          ---
+          *This test plan was automatically generated. Please review and customize as needed.*
+          EOF
+          
+          # Replace variables in the test plan
+          sed -i "s/\$ISSUE_NUMBER/$ISSUE_NUMBER/g" test_plan.md
+          sed -i "s/\$ISSUE_TITLE/$ISSUE_TITLE/g" test_plan.md
+          
+          # Save test plan content for next step
+          echo "test_plan_content<<EOF" >> $GITHUB_OUTPUT
+          cat test_plan.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Comment Test Plan on Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const testPlan = `${{ steps.generate.outputs.test_plan_content }}`;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: testPlan
+            });
+            
+            // Add label
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['test-plan-generated']
+            });
