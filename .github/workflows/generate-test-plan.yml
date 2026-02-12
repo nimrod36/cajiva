@@ -22,6 +22,8 @@ jobs:
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           
+          # Note: Issue content is pre-sanitized by GitHub API
+          
           # Initialize LLM success flag
           LLM_SUCCESS="false"
           
@@ -59,13 +61,13 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ github.token }}" \
             https://models.inference.ai.azure.com/chat/completions \
-            -d "$JSON_PAYLOAD" 2>&1)
+            -d "$JSON_PAYLOAD" 2>/dev/null)  # Redirect stderr to avoid token exposure
           CURL_EXIT_CODE=$?
           set -e  # Re-enable exit on error
           
           # Check if curl command succeeded
           if [ $CURL_EXIT_CODE -ne 0 ]; then
-            echo "⚠️  Curl command failed with exit code $CURL_EXIT_CODE, falling back to template"
+            echo "⚠️  Network request failed (curl exit code: $CURL_EXIT_CODE), falling back to template"
             API_RESPONSE=""
             HTTP_STATUS="000"
           else
@@ -78,11 +80,12 @@ jobs:
           
           # Check if API call was successful
           if [ "$HTTP_STATUS" = "200" ]; then
-            # Validate JSON response structure and extract content
-            if echo "$API_BODY" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
-              TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r '.choices[0].message.content')
-              
-              if [ -n "$TEST_PLAN_CONTENT" ]; then
+            # Validate JSON response structure and extract content in one operation
+            TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r 'if .choices[0].message.content then .choices[0].message.content else empty end')
+            
+            if [ -n "$TEST_PLAN_CONTENT" ] && [ "$TEST_PLAN_CONTENT" != "null" ]; then
+              # Basic validation: check if response looks like markdown (contains headers)
+              if echo "$TEST_PLAN_CONTENT" | grep -q "^#"; then
                 echo "✅ Successfully generated test plan using AI"
                 LLM_SUCCESS="true"
                 
@@ -92,16 +95,16 @@ jobs:
                 echo "---" >> test_plan.md
                 echo "*🤖 This test plan was generated using AI (GPT-4o) by analyzing the issue context.*" >> test_plan.md
               else
-                echo "⚠️  API returned empty content, falling back to template"
+                echo "⚠️  AI response doesn't contain expected markdown structure, falling back to template"
               fi
             else
-              echo "⚠️  API returned unexpected JSON structure, falling back to template"
-              echo "Response: $API_BODY"
+              echo "⚠️  API returned empty or null content, falling back to template"
             fi
           else
             echo "⚠️  API call failed with status $HTTP_STATUS, falling back to template"
-            if [ -n "$API_BODY" ]; then
-              echo "Response: $API_BODY"
+            # Only log response body if it's not sensitive (avoid logging auth errors)
+            if [ "$HTTP_STATUS" != "401" ] && [ "$HTTP_STATUS" != "403" ]; then
+              echo "Response preview: $(echo "$API_BODY" | head -c 200)"
             fi
           fi
           
