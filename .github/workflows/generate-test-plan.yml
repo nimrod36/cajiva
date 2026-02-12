@@ -22,200 +22,292 @@ jobs:
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_NUMBER="${{ github.event.issue.number }}"
           
-          # Detect issue type from title and body
-          ISSUE_TYPE="feature"
-          if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "bug\|error\|crash\|fail\|broken\|fix"; then
-            ISSUE_TYPE="bug"
-          elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "performance\|slow\|optimize\|speed"; then
-            ISSUE_TYPE="performance"
-          elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "ui\|ux\|interface\|design\|layout"; then
-            ISSUE_TYPE="ui"
+          # Note: Issue content is pre-sanitized by GitHub API
+          
+          # Initialize LLM success flag
+          LLM_SUCCESS="false"
+          
+          # Try to generate test plan using AI (GitHub Models API)
+          echo "Attempting to generate test plan using AI (GPT-4o)..."
+          
+          # Prepare JSON payload with inline prompt construction
+          JSON_PAYLOAD=$(jq -n \
+            --arg issue_number "$ISSUE_NUMBER" \
+            --arg issue_title "$ISSUE_TITLE" \
+            --arg issue_body "$ISSUE_BODY" \
+            '{
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are an expert QA engineer. Generate detailed, actionable test plans based on GitHub issues. Your test plans should be specific to the issue context and include comprehensive test cases with clear steps and expected results."
+                },
+                {
+                  "role": "user",
+                  "content": ("Generate a detailed, actionable test plan for the following GitHub issue.\n\nIssue #" + $issue_number + ": " + $issue_title + "\n\nIssue Description:\n" + $issue_body + "\n\nGenerate a comprehensive test plan with the following structure:\n1. A title with appropriate emoji (🐛 for bugs, ✨ for features, ⚡ for performance, 🎨 for UI/UX)\n2. Test Objectives section - 3-4 clear objectives\n3. Test Strategy section - brief strategy based on the issue type\n4. Test Cases section - 4-6 specific test cases, each with:\n   - Clear title\n   - Detailed steps\n   - Expected results\n   - Priority level (Critical/High/Medium/Low)\n5. Acceptance Criteria section - 4-6 checkboxes with specific criteria\n6. Testing Considerations section - edge cases, dependencies, risks\n\nUse markdown formatting. Be specific to this issue context. Include technical details from the issue description.")
+                }
+              ],
+              "model": "gpt-4o",
+              "temperature": 0.7,
+              "max_tokens": 2000
+            }')
+          
+          # Make API call to GitHub Models
+          # GitHub Models API uses Azure AI endpoint with GITHUB_TOKEN authentication
+          # This endpoint is accessible for public repositories
+          set +e  # Temporarily disable exit on error
+          API_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            https://models.inference.ai.azure.com/chat/completions \
+            -d "$JSON_PAYLOAD" 2>/dev/null)  # Redirect stderr to avoid token exposure
+          CURL_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          
+          # Check if curl command succeeded
+          if [ $CURL_EXIT_CODE -ne 0 ]; then
+            echo "⚠️  Network request failed (curl exit code: $CURL_EXIT_CODE), falling back to template"
+            API_RESPONSE=""
+            HTTP_STATUS="000"
+          else
+            # Split response and status code
+            HTTP_STATUS=$(echo "$API_RESPONSE" | tail -n1)
+            API_BODY=$(echo "$API_RESPONSE" | sed '$d')
           fi
           
-          # Generate dynamic test plan based on issue type
-          case $ISSUE_TYPE in
-            bug)
-              cat > test_plan.md << 'EOF'
-          ## 🐛 Bug Fix Test Plan - Issue #$ISSUE_NUMBER
+          echo "API HTTP Status: $HTTP_STATUS"
           
-          **Issue:** $ISSUE_TITLE
+          # Check if API call was successful
+          if [ "$HTTP_STATUS" = "200" ]; then
+            # Validate JSON response structure and extract content in one operation with bounds checking
+            TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r 'if .choices and (.choices | length > 0) and .choices[0].message and .choices[0].message.content then .choices[0].message.content else empty end')
+            
+            if [ -n "$TEST_PLAN_CONTENT" ] && [ "$TEST_PLAN_CONTENT" != "null" ]; then
+              # Basic validation: check if response looks like markdown (contains headers)
+              if echo "$TEST_PLAN_CONTENT" | grep -q "^#"; then
+                echo "✅ Successfully generated test plan using AI"
+                LLM_SUCCESS="true"
+                
+                # Add AI generation footer
+                echo "$TEST_PLAN_CONTENT" > test_plan.md
+                echo "" >> test_plan.md
+                echo "---" >> test_plan.md
+                echo "*🤖 This test plan was generated using AI (GPT-4o) by analyzing the issue context.*" >> test_plan.md
+              else
+                echo "⚠️  AI response doesn't contain expected markdown structure, falling back to template"
+              fi
+            else
+              echo "⚠️  API returned empty or null content, falling back to template"
+            fi
+          else
+            echo "⚠️  API call failed with status $HTTP_STATUS, falling back to template"
+            # Only log response body if it's not sensitive (avoid logging auth errors)
+            if [ "$HTTP_STATUS" != "401" ] && [ "$HTTP_STATUS" != "403" ]; then
+              echo "Response preview: $(echo "$API_BODY" | head -c 200)"
+            fi
+          fi
           
-          ### Test Objectives
-          - Reproduce the bug described in the issue
-          - Verify the fix resolves the problem
-          - Ensure no regressions are introduced
+          # Fallback to template-based generation if LLM failed
+          if [ "$LLM_SUCCESS" = "false" ]; then
+            echo "Using template-based test plan generation..."
+            
+            # Detect issue type from title and body
+            ISSUE_TYPE="feature"
+            if echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "bug\|error\|crash\|fail\|broken\|fix"; then
+              ISSUE_TYPE="bug"
+            elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "performance\|slow\|optimize\|speed"; then
+              ISSUE_TYPE="performance"
+            elif echo "$ISSUE_TITLE $ISSUE_BODY" | grep -qi "ui\|ux\|interface\|design\|layout"; then
+              ISSUE_TYPE="ui"
+            fi
+            
+            # Generate dynamic test plan based on issue type
+            case $ISSUE_TYPE in
+              bug)
+                cat > test_plan.md << 'EOF'
+## 🐛 Bug Fix Test Plan - Issue #$ISSUE_NUMBER
+
+**Issue:** $ISSUE_TITLE
+
+### Test Objectives
+- Reproduce the bug described in the issue
+- Verify the fix resolves the problem
+- Ensure no regressions are introduced
+
+### Test Cases
+
+#### TC1: Reproduce Original Bug
+- **Steps:** Follow reproduction steps from issue
+- **Expected:** Bug is confirmed reproducible before fix
+- **Priority:** Critical
+
+#### TC2: Verify Bug Fix
+- **Steps:** Apply fix and retest reproduction steps
+- **Expected:** Bug no longer occurs
+- **Priority:** Critical
+
+#### TC3: Regression Testing
+- **Steps:** Test related functionality
+- **Expected:** No new issues introduced
+- **Priority:** High
+
+#### TC4: Edge Cases
+- **Steps:** Test boundary conditions related to the bug
+- **Expected:** Fix works in all scenarios
+- **Priority:** Medium
+
+### Acceptance Criteria
+- [ ] Bug is reproducible before fix
+- [ ] Bug is resolved after fix
+- [ ] No regression in related features
+- [ ] Unit/integration tests added
+
+---
+*Generated using fallback template. Detected keywords: bug, error, fix*
+EOF
+                ;;
+                
+              performance)
+                cat > test_plan.md << 'EOF'
+## ⚡ Performance Test Plan - Issue #$ISSUE_NUMBER
+
+**Issue:** $ISSUE_TITLE
+
+### Test Objectives
+- Measure baseline performance
+- Verify performance improvements
+- Ensure no functionality regression
+
+### Test Cases
+
+#### TC1: Baseline Measurement
+- **Steps:** Measure current performance metrics
+- **Expected:** Documented baseline values
+- **Priority:** High
+
+#### TC2: Performance Improvement
+- **Steps:** Apply optimization and remeasure
+- **Expected:** Measurable improvement in target metrics
+- **Priority:** Critical
+
+#### TC3: Load Testing
+- **Steps:** Test under various load conditions
+- **Expected:** Consistent performance across loads
+- **Priority:** Medium
+
+#### TC4: Resource Usage
+- **Steps:** Monitor CPU, memory, network usage
+- **Expected:** Resource usage within acceptable limits
+- **Priority:** Medium
+
+### Acceptance Criteria
+- [ ] Performance improvement quantified
+- [ ] No functionality regression
+- [ ] Resource usage acceptable
+- [ ] Benchmarks documented
+
+---
+*Generated using fallback template. Detected keywords: performance, optimize*
+EOF
+                ;;
+                
+              ui)
+                cat > test_plan.md << 'EOF'
+## 🎨 UI/UX Test Plan - Issue #$ISSUE_NUMBER
+
+**Issue:** $ISSUE_TITLE
+
+### Test Objectives
+- Verify visual design matches requirements
+- Test user interactions and workflows
+- Ensure responsive design works
+
+### Test Cases
+
+#### TC1: Visual Design
+- **Steps:** Compare implementation with design specs
+- **Expected:** Visual elements match requirements
+- **Priority:** High
+
+#### TC2: User Interactions
+- **Steps:** Test all interactive elements
+- **Expected:** All interactions work smoothly
+- **Priority:** Critical
+
+#### TC3: Responsive Design
+- **Steps:** Test on mobile, tablet, desktop
+- **Expected:** Layout adapts properly to all screen sizes
+- **Priority:** High
+
+#### TC4: Accessibility
+- **Steps:** Test with screen readers, keyboard navigation
+- **Expected:** UI is accessible to all users
+- **Priority:** Medium
+
+### Acceptance Criteria
+- [ ] Visual design approved
+- [ ] All interactions working
+- [ ] Responsive on all devices
+- [ ] Accessibility standards met
+
+---
+*Generated using fallback template. Detected keywords: ui, ux, interface*
+EOF
+                ;;
+                
+              *)
+                cat > test_plan.md << 'EOF'
+## ✨ Feature Test Plan - Issue #$ISSUE_NUMBER
+
+**Issue:** $ISSUE_TITLE
+
+### Test Objectives
+- Verify feature requirements are met
+- Validate integration with existing code
+- Ensure quality and maintainability
+
+### Test Cases
+
+#### TC1: Core Functionality
+- **Steps:** Test main feature implementation
+- **Expected:** Feature works as described in issue
+- **Priority:** Critical
+
+#### TC2: Integration
+- **Steps:** Test feature with existing functionality
+- **Expected:** Seamless integration, no conflicts
+- **Priority:** High
+
+#### TC3: Edge Cases
+- **Steps:** Test boundary conditions and unusual inputs
+- **Expected:** Feature handles edge cases gracefully
+- **Priority:** Medium
+
+#### TC4: Error Handling
+- **Steps:** Test with invalid inputs and error conditions
+- **Expected:** Appropriate error messages displayed
+- **Priority:** Medium
+
+### Acceptance Criteria
+- [ ] All requirements from issue implemented
+- [ ] Tests pass (unit + integration)
+- [ ] Code reviewed and approved
+- [ ] Documentation updated
+
+---
+*Generated using fallback template*
+EOF
+                ;;
+            esac
+            
+            # Replace variables in the test plan
+            sed -i "s/\$ISSUE_NUMBER/$ISSUE_NUMBER/g" test_plan.md
+            sed -i "s/\$ISSUE_TITLE/$ISSUE_TITLE/g" test_plan.md
+          fi
           
-          ### Test Cases
-          
-          #### TC1: Reproduce Original Bug
-          - **Steps:** Follow reproduction steps from issue
-          - **Expected:** Bug is confirmed reproducible before fix
-          - **Priority:** Critical
-          
-          #### TC2: Verify Bug Fix
-          - **Steps:** Apply fix and retest reproduction steps
-          - **Expected:** Bug no longer occurs
-          - **Priority:** Critical
-          
-          #### TC3: Regression Testing
-          - **Steps:** Test related functionality
-          - **Expected:** No new issues introduced
-          - **Priority:** High
-          
-          #### TC4: Edge Cases
-          - **Steps:** Test boundary conditions related to the bug
-          - **Expected:** Fix works in all scenarios
-          - **Priority:** Medium
-          
-          ### Acceptance Criteria
-          - [ ] Bug is reproducible before fix
-          - [ ] Bug is resolved after fix
-          - [ ] No regression in related features
-          - [ ] Unit/integration tests added
-          
-          ---
-          *Auto-generated bug fix test plan. Detected keywords: bug, error, fix*
-          EOF
-              ;;
-              
-            performance)
-              cat > test_plan.md << 'EOF'
-          ## ⚡ Performance Test Plan - Issue #$ISSUE_NUMBER
-          
-          **Issue:** $ISSUE_TITLE
-          
-          ### Test Objectives
-          - Measure baseline performance
-          - Verify performance improvements
-          - Ensure no functionality regression
-          
-          ### Test Cases
-          
-          #### TC1: Baseline Measurement
-          - **Steps:** Measure current performance metrics
-          - **Expected:** Documented baseline values
-          - **Priority:** High
-          
-          #### TC2: Performance Improvement
-          - **Steps:** Apply optimization and remeasure
-          - **Expected:** Measurable improvement in target metrics
-          - **Priority:** Critical
-          
-          #### TC3: Load Testing
-          - **Steps:** Test under various load conditions
-          - **Expected:** Consistent performance across loads
-          - **Priority:** Medium
-          
-          #### TC4: Resource Usage
-          - **Steps:** Monitor CPU, memory, network usage
-          - **Expected:** Resource usage within acceptable limits
-          - **Priority:** Medium
-          
-          ### Acceptance Criteria
-          - [ ] Performance improvement quantified
-          - [ ] No functionality regression
-          - [ ] Resource usage acceptable
-          - [ ] Benchmarks documented
-          
-          ---
-          *Auto-generated performance test plan. Detected keywords: performance, optimize*
-          EOF
-              ;;
-              
-            ui)
-              cat > test_plan.md << 'EOF'
-          ## 🎨 UI/UX Test Plan - Issue #$ISSUE_NUMBER
-          
-          **Issue:** $ISSUE_TITLE
-          
-          ### Test Objectives
-          - Verify visual design matches requirements
-          - Test user interactions and workflows
-          - Ensure responsive design works
-          
-          ### Test Cases
-          
-          #### TC1: Visual Design
-          - **Steps:** Compare implementation with design specs
-          - **Expected:** Visual elements match requirements
-          - **Priority:** High
-          
-          #### TC2: User Interactions
-          - **Steps:** Test all interactive elements
-          - **Expected:** All interactions work smoothly
-          - **Priority:** Critical
-          
-          #### TC3: Responsive Design
-          - **Steps:** Test on mobile, tablet, desktop
-          - **Expected:** Layout adapts properly to all screen sizes
-          - **Priority:** High
-          
-          #### TC4: Accessibility
-          - **Steps:** Test with screen readers, keyboard navigation
-          - **Expected:** UI is accessible to all users
-          - **Priority:** Medium
-          
-          ### Acceptance Criteria
-          - [ ] Visual design approved
-          - [ ] All interactions working
-          - [ ] Responsive on all devices
-          - [ ] Accessibility standards met
-          
-          ---
-          *Auto-generated UI/UX test plan. Detected keywords: ui, ux, interface*
-          EOF
-              ;;
-              
-            *)
-              cat > test_plan.md << 'EOF'
-          ## ✨ Feature Test Plan - Issue #$ISSUE_NUMBER
-          
-          **Issue:** $ISSUE_TITLE
-          
-          ### Test Objectives
-          - Verify feature requirements are met
-          - Validate integration with existing code
-          - Ensure quality and maintainability
-          
-          ### Test Cases
-          
-          #### TC1: Core Functionality
-          - **Steps:** Test main feature implementation
-          - **Expected:** Feature works as described in issue
-          - **Priority:** Critical
-          
-          #### TC2: Integration
-          - **Steps:** Test feature with existing functionality
-          - **Expected:** Seamless integration, no conflicts
-          - **Priority:** High
-          
-          #### TC3: Edge Cases
-          - **Steps:** Test boundary conditions and unusual inputs
-          - **Expected:** Feature handles edge cases gracefully
-          - **Priority:** Medium
-          
-          #### TC4: Error Handling
-          - **Steps:** Test with invalid inputs and error conditions
-          - **Expected:** Appropriate error messages displayed
-          - **Priority:** Medium
-          
-          ### Acceptance Criteria
-          - [ ] All requirements from issue implemented
-          - [ ] Tests pass (unit + integration)
-          - [ ] Code reviewed and approved
-          - [ ] Documentation updated
-          
-          ---
-          *Auto-generated feature test plan*
-          EOF
-              ;;
-          esac
-          
-          # Replace variables in the test plan
-          sed -i "s/\$ISSUE_NUMBER/$ISSUE_NUMBER/g" test_plan.md
-          sed -i "s/\$ISSUE_TITLE/$ISSUE_TITLE/g" test_plan.md
-          
-          # Save test plan content for next step
+          # Save test plan content and LLM success flag for next step
+          echo "llm_success=$LLM_SUCCESS" >> $GITHUB_OUTPUT
           echo "test_plan_content<<EOF" >> $GITHUB_OUTPUT
           cat test_plan.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -225,6 +317,7 @@ jobs:
         with:
           script: |
             const testPlan = `${{ steps.generate.outputs.test_plan_content }}`;
+            const llmSuccess = '${{ steps.generate.outputs.llm_success }}';
             
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -233,10 +326,15 @@ jobs:
               body: testPlan
             });
             
-            // Add label
+            // Add labels
+            const labels = ['test-plan-generated'];
+            if (llmSuccess === 'true') {
+              labels.push('ai-generated');
+            }
+            
             await github.rest.issues.addLabels({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              labels: ['test-plan-generated']
+              labels: labels
             });
