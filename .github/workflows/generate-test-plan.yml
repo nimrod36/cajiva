@@ -3,6 +3,12 @@ name: Generate Test Plan for Issue
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to generate test plan for'
+        required: true
+        type: number
 
 jobs:
   generate-test-plan:
@@ -18,9 +24,18 @@ jobs:
       - name: Generate Test Plan
         id: generate
         run: |
-          ISSUE_TITLE="${{ github.event.issue.title }}"
-          ISSUE_BODY="${{ github.event.issue.body }}"
-          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          # Handle both issue events and manual workflow_dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ISSUE_NUMBER="${{ github.event.inputs.issue_number }}"
+            ISSUE_DATA=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER")
+            ISSUE_TITLE=$(echo "$ISSUE_DATA" | jq -r '.title')
+            ISSUE_BODY=$(echo "$ISSUE_DATA" | jq -r '.body // ""')
+          else
+            ISSUE_TITLE="${{ github.event.issue.title }}"
+            ISSUE_BODY="${{ github.event.issue.body }}"
+            ISSUE_NUMBER="${{ github.event.issue.number }}"
+          fi
           
           # Note: Issue content is pre-sanitized by GitHub API
           
@@ -306,8 +321,9 @@ EOF
             sed -i "s/\$ISSUE_TITLE/$ISSUE_TITLE/g" test_plan.md
           fi
           
-          # Save test plan content and LLM success flag for next step
+          # Save test plan content, LLM success flag, and issue number for next step
           echo "llm_success=$LLM_SUCCESS" >> $GITHUB_OUTPUT
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
           echo "test_plan_content<<EOF" >> $GITHUB_OUTPUT
           cat test_plan.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -318,9 +334,10 @@ EOF
           script: |
             const testPlan = `${{ steps.generate.outputs.test_plan_content }}`;
             const llmSuccess = '${{ steps.generate.outputs.llm_success }}';
+            const issueNumber = '${{ steps.generate.outputs.issue_number }}' || context.issue.number;
             
             await github.rest.issues.createComment({
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: testPlan
@@ -333,7 +350,7 @@ EOF
             }
             
             await github.rest.issues.addLabels({
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
               labels: labels
