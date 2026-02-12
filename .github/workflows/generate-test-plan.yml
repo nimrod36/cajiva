@@ -41,7 +41,7 @@ jobs:
                 },
                 {
                   "role": "user",
-                  "content": ("You are an expert QA engineer. Generate a detailed, actionable test plan for the following GitHub issue.\n\nIssue #" + $issue_number + ": " + $issue_title + "\n\nIssue Description:\n" + $issue_body + "\n\nGenerate a comprehensive test plan with the following structure:\n1. A title with appropriate emoji (🐛 for bugs, ✨ for features, ⚡ for performance, 🎨 for UI/UX)\n2. Test Objectives section - 3-4 clear objectives\n3. Test Strategy section - brief strategy based on the issue type\n4. Test Cases section - 4-6 specific test cases, each with:\n   - Clear title\n   - Detailed steps\n   - Expected results\n   - Priority level (Critical/High/Medium/Low)\n5. Acceptance Criteria section - 4-6 checkboxes with specific criteria\n6. Testing Considerations section - edge cases, dependencies, risks\n\nUse markdown formatting. Be specific to this issue context. Include technical details from the issue description.")
+                  "content": ("Generate a detailed, actionable test plan for the following GitHub issue.\n\nIssue #" + $issue_number + ": " + $issue_title + "\n\nIssue Description:\n" + $issue_body + "\n\nGenerate a comprehensive test plan with the following structure:\n1. A title with appropriate emoji (🐛 for bugs, ✨ for features, ⚡ for performance, 🎨 for UI/UX)\n2. Test Objectives section - 3-4 clear objectives\n3. Test Strategy section - brief strategy based on the issue type\n4. Test Cases section - 4-6 specific test cases, each with:\n   - Clear title\n   - Detailed steps\n   - Expected results\n   - Priority level (Critical/High/Medium/Low)\n5. Acceptance Criteria section - 4-6 checkboxes with specific criteria\n6. Testing Considerations section - edge cases, dependencies, risks\n\nUse markdown formatting. Be specific to this issue context. Include technical details from the issue description.")
                 }
               ],
               "model": "gpt-4o",
@@ -52,39 +52,57 @@ jobs:
           # Make API call to GitHub Models
           # GitHub Models API uses Azure AI endpoint with GITHUB_TOKEN authentication
           # This endpoint is accessible for public repositories
+          set +e  # Temporarily disable exit on error
           API_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 30 \
             -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ github.token }}" \
             https://models.inference.ai.azure.com/chat/completions \
-            -d "$JSON_PAYLOAD")
+            -d "$JSON_PAYLOAD" 2>&1)
+          CURL_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
           
-          # Split response and status code
-          HTTP_STATUS=$(echo "$API_RESPONSE" | tail -n1)
-          API_BODY=$(echo "$API_RESPONSE" | sed '$d')
+          # Check if curl command succeeded
+          if [ $CURL_EXIT_CODE -ne 0 ]; then
+            echo "⚠️  Curl command failed with exit code $CURL_EXIT_CODE, falling back to template"
+            API_RESPONSE=""
+            HTTP_STATUS="000"
+          else
+            # Split response and status code
+            HTTP_STATUS=$(echo "$API_RESPONSE" | tail -n1)
+            API_BODY=$(echo "$API_RESPONSE" | sed '$d')
+          fi
           
           echo "API HTTP Status: $HTTP_STATUS"
           
           # Check if API call was successful
           if [ "$HTTP_STATUS" = "200" ]; then
-            # Extract the content from the response
-            TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r '.choices[0].message.content // empty')
-            
-            if [ -n "$TEST_PLAN_CONTENT" ]; then
-              echo "✅ Successfully generated test plan using AI"
-              LLM_SUCCESS="true"
+            # Validate JSON response structure and extract content
+            if echo "$API_BODY" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
+              TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r '.choices[0].message.content')
               
-              # Add AI generation footer
-              echo "$TEST_PLAN_CONTENT" > test_plan.md
-              echo "" >> test_plan.md
-              echo "---" >> test_plan.md
-              echo "*🤖 This test plan was generated using AI (GPT-4o) by analyzing the issue context.*" >> test_plan.md
+              if [ -n "$TEST_PLAN_CONTENT" ]; then
+                echo "✅ Successfully generated test plan using AI"
+                LLM_SUCCESS="true"
+                
+                # Add AI generation footer
+                echo "$TEST_PLAN_CONTENT" > test_plan.md
+                echo "" >> test_plan.md
+                echo "---" >> test_plan.md
+                echo "*🤖 This test plan was generated using AI (GPT-4o) by analyzing the issue context.*" >> test_plan.md
+              else
+                echo "⚠️  API returned empty content, falling back to template"
+              fi
             else
-              echo "⚠️  API returned empty content, falling back to template"
+              echo "⚠️  API returned unexpected JSON structure, falling back to template"
+              echo "Response: $API_BODY"
             fi
           else
             echo "⚠️  API call failed with status $HTTP_STATUS, falling back to template"
-            echo "Response: $API_BODY"
+            if [ -n "$API_BODY" ]; then
+              echo "Response: $API_BODY"
+            fi
           fi
           
           # Fallback to template-based generation if LLM failed
