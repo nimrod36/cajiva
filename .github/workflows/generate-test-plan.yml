@@ -80,8 +80,8 @@ jobs:
           
           # Check if API call was successful
           if [ "$HTTP_STATUS" = "200" ]; then
-            # Validate JSON response structure and extract content in one operation
-            TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r 'if .choices[0].message.content then .choices[0].message.content else empty end')
+            # Validate JSON response structure and extract content in one operation with bounds checking
+            TEST_PLAN_CONTENT=$(echo "$API_BODY" | jq -r 'if .choices and (.choices | length > 0) and .choices[0].message and .choices[0].message.content then .choices[0].message.content else empty end')
             
             if [ -n "$TEST_PLAN_CONTENT" ] && [ "$TEST_PLAN_CONTENT" != "null" ]; then
               # Basic validation: check if response looks like markdown (contains headers)
