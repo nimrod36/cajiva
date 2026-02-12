@@ -41,7 +41,7 @@ jobs:
                 },
                 {
                   "role": "user",
-                  "content": ("You are an expert QA engineer. Generate a detailed, actionable test plan for the following GitHub issue.\n\nIssue #" + $issue_number + ": " + $issue_title + "\n\nIssue Description:\n" + $issue_body + "\n\nGenerate a comprehensive test plan with the following structure:\n1. A title with appropriate emoji (🐛 for bugs, ✨ for features, ⚡ for performance, 🎨 for UI/UX)\n2. Test Objectives section - 3-4 clear objectives\n3. Test Strategy section - brief strategy based on the issue type\n4. Test Cases section - 4-6 specific test cases, each with:\n   - Clear title\n   - Detailed steps\n   - Expected results\n   - Priority level (Critical/High/Medium/Low)\n5. Acceptance Criteria section - 4-6 checkboxes with specific criteria\n6. Testing Considerations section - edge cases, dependencies, risks\n\nUse markdown formatting. Be specific to this issue'\''s context. Include technical details from the issue description.")
+                  "content": ("You are an expert QA engineer. Generate a detailed, actionable test plan for the following GitHub issue.\n\nIssue #" + $issue_number + ": " + $issue_title + "\n\nIssue Description:\n" + $issue_body + "\n\nGenerate a comprehensive test plan with the following structure:\n1. A title with appropriate emoji (🐛 for bugs, ✨ for features, ⚡ for performance, 🎨 for UI/UX)\n2. Test Objectives section - 3-4 clear objectives\n3. Test Strategy section - brief strategy based on the issue type\n4. Test Cases section - 4-6 specific test cases, each with:\n   - Clear title\n   - Detailed steps\n   - Expected results\n   - Priority level (Critical/High/Medium/Low)\n5. Acceptance Criteria section - 4-6 checkboxes with specific criteria\n6. Testing Considerations section - edge cases, dependencies, risks\n\nUse markdown formatting. Be specific to this issue context. Include technical details from the issue description.")
                 }
               ],
               "model": "gpt-4o",
@@ -50,6 +50,8 @@ jobs:
             }')
           
           # Make API call to GitHub Models
+          # GitHub Models API uses Azure AI endpoint with GITHUB_TOKEN authentication
+          # This endpoint is accessible for public repositories
           API_RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
