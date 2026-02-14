@@ -89,18 +89,7 @@ jobs:
               const testPlan = data.choices[0].message.content;
               
               // Create formatted comment
-              const comment = `## 🧪 BDD Test Plan Generated (AI-Powered by GitHub Copilot)
-              
-${testPlan}
-
----
-
-<details>
-<summary>📋 Test Plan Guidelines</summary>
-
-### Running These Tests
-
-` + '```bash' + `
+              const comment = `## 🧪 BDD Test Plan Generated (AI-Powered by GitHub Copilot)\n\n${testPlan}\n\n---\n\n<details>\n<summary>📋 Test Plan Guidelines</summary>\n\n### Running These Tests\n\n` + '```bash' + `
 # Create feature file
 mkdir -p specs/[feature-name]
 # Add scenarios to specs/[feature-name]/[feature-name].feature

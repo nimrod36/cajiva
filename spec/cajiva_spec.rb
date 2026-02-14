@@ -6,7 +6,7 @@ require_relative '../lib/linear_regression'
 
 describe 'Cajiva' do
   it 'has a version number' do
-    expect(::Cajiva::VERSION).not_to be nil
+    expect(Cajiva::VERSION).not_to be nil
   end
 end
 

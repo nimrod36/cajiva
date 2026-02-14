@@ -87,7 +87,7 @@ Given('a regression model with intercept = {float} and slope = {float}') do |int
   # Create data that produces exactly these parameters
   # For simplicity, we'll create the model and verify prediction behavior
   @x_values = [1, 2, 3, 4, 5]
-  @y_values = @x_values.map { |x| slope * x + intercept }
+  @y_values = @x_values.map { |x| (slope * x) + intercept }
   @model = Cajiva::LinearRegression.new(@x_values, @y_values)
   @expected_intercept = intercept
   @expected_slope = slope
