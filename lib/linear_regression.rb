@@ -14,10 +14,7 @@ module Cajiva
       @intercept = 0
       @r_squared = 0
 
-      case method
-      when :matrix
-        calculate_regression_matrix
-      when :formula
+      if method == :formula
         calculate_regression_formula
       else
         calculate_regression_matrix
@@ -25,7 +22,7 @@ module Cajiva
     end
 
     def predict(input_x)
-      @slope * input_x + @intercept
+      (@slope * input_x) + @intercept
     end
 
     def equation
@@ -63,9 +60,9 @@ module Cajiva
       sum_y = @y_values.sum
       sum_xy = @x_values.zip(@y_values).map { |val_x, val_y| val_x * val_y }.sum
       sum_x2 = @x_values.map { |val_x| val_x**2 }.sum
-      denominator = (n * sum_x2 - sum_x**2).to_f
-      @slope = (n * sum_xy - sum_x * sum_y) / denominator
-      @intercept = (sum_y - @slope * sum_x) / n.to_f
+      denominator = ((n * sum_x2) - (sum_x**2)).to_f
+      @slope = ((n * sum_xy) - (sum_x * sum_y)) / denominator
+      @intercept = (sum_y - (@slope * sum_x)) / n.to_f
       calculate_r_squared
     end
 

@@ -89,40 +89,42 @@ jobs:
               const testPlan = data.choices[0].message.content;
               
               // Create formatted comment
-              const comment = `## 🧪 BDD Test Plan Generated (AI-Powered by GitHub Copilot)
-              
-${testPlan}
-
----
-
-<details>
-<summary>📋 Test Plan Guidelines</summary>
-
-### Running These Tests
-
-\`\`\`bash
-# Create feature file
-mkdir -p specs/[feature-name]
-# Add scenarios to specs/[feature-name]/[feature-name].feature
-
-# Implement step definitions
-# Create specs/[feature-name]/step_definitions/[feature]_steps.rb
-
-# Run tests
-bundle exec cucumber specs/[feature-name]/
-\`\`\`
-
-### Test Philosophy
-- **Declarative**: Focus on behavior, not implementation
-- **Three Amigos**: Cover Product, Developer, and Tester perspectives
-- **Living Documentation**: Tests serve as executable specifications
-- **Anti-Fragile**: Stable across refactors and implementation changes
-
-### Reference
-See [BDD_TEST_PLAN.md](../blob/main/BDD_TEST_PLAN.md) for complete guidelines.
-</details>
-
-*Generated using GitHub Copilot (GPT-4o) based on Specification by Example principles*`;
+              const comment = [
+                '## 🧪 BDD Test Plan Generated (AI-Powered by GitHub Copilot)',
+                '',
+                testPlan,
+                '',
+                '---',
+                '',
+                '<details>',
+                '<summary>📋 Test Plan Guidelines</summary>',
+                '',
+                '### Running These Tests',
+                '',
+                '```bash',
+                '# Create feature file',
+                'mkdir -p specs/[feature-name]',
+                '# Add scenarios to specs/[feature-name]/[feature-name].feature',
+                '',
+                '# Implement step definitions',
+                '# Create specs/[feature-name]/step_definitions/[feature]_steps.rb',
+                '',
+                '# Run tests',
+                'bundle exec cucumber specs/[feature-name]/',
+                '```',
+                '',
+                '### Test Philosophy',
+                '- **Declarative**: Focus on behavior, not implementation',
+                '- **Three Amigos**: Cover Product, Developer, and Tester perspectives',
+                '- **Living Documentation**: Tests serve as executable specifications',
+                '- **Anti-Fragile**: Stable across refactors and implementation changes',
+                '',
+                '### Reference',
+                'See [BDD_TEST_PLAN.md](../blob/main/BDD_TEST_PLAN.md) for complete guidelines.',
+                '</details>',
+                '',
+                '*Generated using GitHub Copilot (GPT-4o) based on Specification by Example principles*'
+              ].join('\n');
               
               // Post comment to issue
               await github.rest.issues.createComment({
@@ -138,48 +140,50 @@ See [BDD_TEST_PLAN.md](../blob/main/BDD_TEST_PLAN.md) for complete guidelines.
               console.error('Error generating test plan:', error);
               
               // Fallback: Post error message with manual template
-              const fallbackComment = `## ⚠️ Test Plan Generation Failed
-
-Unable to generate AI-powered test plan. Error: ${error.message}
-
-### Manual BDD Test Plan Template
-
-Please create test scenarios following this structure:
-
-\`\`\`gherkin
-Feature: [Feature Name]
-  As a [role]
-  I want to [action]
-  So that [business value]
-
-  Background:
-    Given [common precondition]
-    And [another precondition]
-
-  Scenario: [Happy path scenario name]
-    Given [initial context]
-    When [action occurs]
-    Then [expected outcome]
-    And [additional verification]
-
-  Scenario: [Edge case scenario name]
-    Given [edge case context]
-    When [action with edge case]
-    Then [expected error handling]
-
-  Scenario: [Error handling scenario name]
-    Given [error condition]
-    When [action attempted]
-    Then [graceful failure behavior]
-\`\`\`
-
-### Guidelines
-- Use **declarative** style (behavior-focused, not implementation-focused)
-- Cover **Three Amigos** perspectives: Product, Developer, Tester
-- Include happy paths, edge cases, and error scenarios
-- See [BDD_TEST_PLAN.md](../blob/main/BDD_TEST_PLAN.md) for complete guidelines
-
-*Please generate test scenarios manually and update this issue*`;
+              const fallbackComment = [
+                '## ⚠️ Test Plan Generation Failed',
+                '',
+                `Unable to generate AI-powered test plan. Error: ${error.message}`,
+                '',
+                '### Manual BDD Test Plan Template',
+                '',
+                'Please create test scenarios following this structure:',
+                '',
+                '```gherkin',
+                'Feature: [Feature Name]',
+                '  As a [role]',
+                '  I want to [action]',
+                '  So that [business value]',
+                '',
+                '  Background:',
+                '    Given [common precondition]',
+                '    And [another precondition]',
+                '',
+                '  Scenario: [Happy path scenario name]',
+                '    Given [initial context]',
+                '    When [action occurs]',
+                '    Then [expected outcome]',
+                '    And [additional verification]',
+                '',
+                '  Scenario: [Edge case scenario name]',
+                '    Given [edge case context]',
+                '    When [action with edge case]',
+                '    Then [expected error handling]',
+                '',
+                '  Scenario: [Error handling scenario name]',
+                '    Given [error condition]',
+                '    When [action attempted]',
+                '    Then [graceful failure behavior]',
+                '```',
+                '',
+                '### Guidelines',
+                '- Use **declarative** style (behavior-focused, not implementation-focused)',
+                '- Cover **Three Amigos** perspectives: Product, Developer, Tester',
+                '- Include happy paths, edge cases, and error scenarios',
+                'See [BDD_TEST_PLAN.md](../blob/main/BDD_TEST_PLAN.md) for complete guidelines',
+                '',
+                '*Please generate test scenarios manually and update this issue*'
+              ].join('\n');
               
               await github.rest.issues.createComment({
                 issue_number: issue.number,

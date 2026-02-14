@@ -35,7 +35,7 @@ module Cajiva
       y_values = []
 
       records.each_with_index do |record, index|
-        x_values << index + 1
+        x_values << (index + 1)
         y_values << record['temperature'].to_f
       end
 
