@@ -147,7 +147,7 @@ jobs:
             # Generate dynamic test plan based on issue type
             case $ISSUE_TYPE in
               bug)
-                cat > test_plan.md << 'EOF'
+                cat > test_plan.md <<'EOF'
 ## 🐛 Bug Fix Test Plan - Issue #$ISSUE_NUMBER
 
 **Issue:** $ISSUE_TITLE
@@ -191,7 +191,7 @@ EOF
                 ;;
                 
               performance)
-                cat > test_plan.md << 'EOF'
+                cat > test_plan.md <<'EOF'
 ## ⚡ Performance Test Plan - Issue #$ISSUE_NUMBER
 
 **Issue:** $ISSUE_TITLE
@@ -235,7 +235,7 @@ EOF
                 ;;
                 
               ui)
-                cat > test_plan.md << 'EOF'
+                cat > test_plan.md <<'EOF'
 ## 🎨 UI/UX Test Plan - Issue #$ISSUE_NUMBER
 
 **Issue:** $ISSUE_TITLE
@@ -279,7 +279,7 @@ EOF
                 ;;
                 
               *)
-                cat > test_plan.md << 'EOF'
+                cat > test_plan.md <<'EOF'
 ## ✨ Feature Test Plan - Issue #$ISSUE_NUMBER
 
 **Issue:** $ISSUE_TITLE
