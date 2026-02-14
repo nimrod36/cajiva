@@ -100,7 +100,7 @@ ${testPlan}
 
 ### Running These Tests
 
-\`\`\`bash
+` + '```bash' + `
 # Create feature file
 mkdir -p specs/[feature-name]
 # Add scenarios to specs/[feature-name]/[feature-name].feature
@@ -110,7 +110,7 @@ mkdir -p specs/[feature-name]
 
 # Run tests
 bundle exec cucumber specs/[feature-name]/
-\`\`\`
+` + '```' + `
 
 ### Test Philosophy
 - **Declarative**: Focus on behavior, not implementation
@@ -146,7 +146,7 @@ Unable to generate AI-powered test plan. Error: ${error.message}
 
 Please create test scenarios following this structure:
 
-\`\`\`gherkin
+` + '```gherkin' + `
 Feature: [Feature Name]
   As a [role]
   I want to [action]
@@ -171,7 +171,7 @@ Feature: [Feature Name]
     Given [error condition]
     When [action attempted]
     Then [graceful failure behavior]
-\`\`\`
+` + '```' + `
 
 ### Guidelines
 - Use **declarative** style (behavior-focused, not implementation-focused)
