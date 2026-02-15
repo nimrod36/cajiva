@@ -84,6 +84,39 @@ Feature: Linear Regression Temperature Analysis
       And the regression line should be overlaid on the chart
       And statistics should display on the page
 
+    Scenario: Web UI provides inputs to add a new data point
+      When the user accesses the Cajiva web interface
+      Then the add data point form should be available
+
+    Scenario: User adds a new data point in the UI
+      When the user accesses the Cajiva web interface
+      And the user provides a day and temperature
+      And the user adds the data point
+      Then the new data point should appear in the list
+      And the data points count should increase
+      And the chart should include the new point
+
+    Scenario: User removes an added data point
+      Given the user has added a new data point
+      When the user removes the data point
+      Then the new data point should be removed from the list
+      And the data points count should decrease
+
+    Scenario: Recalculate regression requires at least one new point
+      When the user attempts to recalculate without new points
+      Then the UI should show a validation message
+
+    Scenario: API recalculates regression with user-provided data
+      Given a set of new data points provided by the user
+      When a client posts the data to the recalculation endpoint
+      Then the API should return a JSON response
+      And the response should include actual data points
+      And the response should include regression line points
+      And the response should include the regression equation
+      And the response should include the R² value
+      And the response should include slope and intercept values
+      And the recalculated data should include the new points
+
   Rule: Error Handling and Edge Cases
 
     Scenario: Handle insufficient data for regression

@@ -112,3 +112,79 @@ Then('statistics should display on the page') do
   # This would require browser testing to fully verify
   pending 'Requires browser/JavaScript testing'
 end
+
+Then('the add data point form should be available') do
+  expect(@last_response.status).to eq(200)
+  expect(@last_response.body).to include('Add New Data Point')
+  expect(@last_response.body).to include('newDay')
+  expect(@last_response.body).to include('newTemp')
+  expect(@last_response.body).to include('addDataPoint')
+end
+
+When('the user provides a day and temperature') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+When('the user adds the data point') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the new data point should appear in the list') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the data points count should increase') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the chart should include the new point') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Given('the user has added a new data point') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+When('the user removes the data point') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the new data point should be removed from the list') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the data points count should decrease') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+When('the user attempts to recalculate without new points') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Then('the UI should show a validation message') do
+  pending 'Requires browser/JavaScript testing'
+end
+
+Given('a set of new data points provided by the user') do
+  @new_points = [
+    { 'x' => 1, 'y' => 20.0 },
+    { 'x' => 2, 'y' => 21.5 },
+    { 'x' => 3, 'y' => 23.0 }
+  ]
+end
+
+When('a client posts the data to the recalculation endpoint') do
+  post '/api/recalculate', { data: @new_points }.to_json, { 'CONTENT_TYPE' => 'application/json' }
+  @last_response = last_response
+  @response_data = JSON.parse(@last_response.body) unless @last_response.body.nil? || @last_response.body.empty?
+end
+
+Then('the recalculated data should include the new points') do
+  expect(@response_data).to have_key('actual')
+  returned_points = @response_data['actual'].map { |point| [point['x'], point['y']] }
+  expected_points = @new_points.map { |point| [point['x'], point['y'].round(2)] }
+
+  expected_points.each do |point|
+    expect(returned_points).to include(point)
+  end
+end

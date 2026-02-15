@@ -1,0 +1,1 @@
+understand what the developer impediment, read the test plan (BDD_TEST_PLAN.md) and add test coverage for the feature that is being developed.
