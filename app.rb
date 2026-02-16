@@ -33,6 +33,49 @@ get '/api/data' do
   }.to_json
 end
 
+# API endpoint to add a single data point
+post '/api/data' do
+  content_type :json
+
+  begin
+    request.body.rewind
+    params = JSON.parse(request.body.read)
+
+    # Get existing data
+    fetcher = Cajiva::JsonDataFetcher.new
+    x_existing, y_existing = fetcher.fetch_temperature_data('Tel Aviv', 6, 2024)
+
+    # Append (not override) new data point
+    new_day = params['day'].to_i
+    new_temp = params['temperature'].to_f
+
+    # Use append operations (<<) to add new point
+    x_existing << new_day
+    y_existing << new_temp
+
+    # Calculate regression with all data
+    model = Cajiva::LinearRegression.new(x_existing, y_existing)
+
+    # Generate regression line points
+    regression_line = x_existing.map { |day| { x: day, y: model.predict(day).round(2) } }
+
+    # Format actual data points
+    actual_data = x_existing.zip(y_existing).map { |day, temp| { x: day, y: temp.round(2) } }
+
+    {
+      actual: actual_data,
+      regression: regression_line,
+      equation: model.equation,
+      r_squared: model.r_squared.round(4),
+      slope: model.slope.round(4),
+      intercept: model.intercept.round(4)
+    }.to_json
+  rescue StandardError => e
+    status 400
+    { error: e.message }.to_json
+  end
+end
+
 # API endpoint to recalculate regression with new data
 post '/api/recalculate' do
   content_type :json
@@ -43,7 +86,7 @@ post '/api/recalculate' do
 
     data_points = params['data']
 
-    # Extract x and y values
+    # Extract x and y values using map (creates new arrays properly)
     x = data_points.map { |point| point['x'] }
     y = data_points.map { |point| point['y'] }
 
