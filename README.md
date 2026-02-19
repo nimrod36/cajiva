@@ -1,6 +1,6 @@
 # Cajiva - Linear Regression Analysis Tool
 
-A Ruby-based data analysis application that performs linear regression on temperature data with an interactive web visualization. Features automated testing, CI/CD pipelines, and dual regression methods (matrix projection and formula-based).
+A Ruby-based data analysis application that performs linear regression on temperature data with an interactive web visualization. Features automated testing, CI/CD pipelines, dual regression methods, and AI-powered feature development automation.
 
 ## Features
 
@@ -15,6 +15,12 @@ A Ruby-based data analysis application that performs linear regression on temper
 - **GitHub Actions CI**: Continuous integration across multiple Ruby versions
 - **Test Suite**: Comprehensive RSpec tests with 10 examples
 - **Code Quality**: RuboCop linting with custom configuration
+
+### AI-Powered Development Automation ✨
+- **🤖 Auto Test Plan Generation**: New issues automatically get comprehensive BDD test plans via Copilot
+- **🔗 Linear Integration**: Sync Linear issues to GitHub with automatic feature kickoff
+- **📝 Copilot Prompts**: Custom prompts for test coverage and feature development
+- **🎯 Workflow Automation**: `/kickoff-feature` prompt generates Gherkin scenarios on issue creation
 
 ## Setup
 
@@ -145,6 +151,61 @@ The project includes two automatic hooks:
 These ensure code quality before it reaches the repository.
 
 ## CI/CD
+
+GitHub Actions workflows automatically run on every push:
+- Ruby 2.7, 3.0, 3.1 compatibility testing
+- RSpec test suite execution
+- RuboCop linting
+- BDD test plan generation on new issues
+- Linear issue synchronization (via webhook)
+
+## AI-Powered Feature Development
+
+### Automatic Test Plan Generation
+
+When you create a new issue, GitHub Copilot automatically generates a comprehensive BDD test plan:
+
+```bash
+# Create an issue (or use Linear webhook)
+# The kickoff-feature-automation workflow triggers automatically
+# Within 30 seconds, a comment appears with:
+# - Gherkin scenarios
+# - Test coverage analysis
+# - Implementation guidance
+```
+
+### Copilot Prompts
+
+The repository includes custom Copilot prompts:
+
+- **`@copilot /kickoff-feature`** ([.github/prompts/kickoff-feature.prompt.md](.github/prompts/kickoff-feature.prompt.md))
+  - Orchestrates feature development lifecycle
+  - Generates comprehensive test plans automatically
+  
+- **`@copilot /create-test-plan`** ([.github/prompts/create-test-plan.prompt.md](.github/prompts/create-test-plan.prompt.md))
+  - Creates BDD test plans following Specification by Example
+  - Follows declarative, anti-fragile design principles
+  
+- **`@copilot /add-test-coverage`** ([.github/prompts/add-test-coverage.prompt.md](.github/prompts/add-test-coverage.prompt.md))
+  - Extends existing feature files with additional scenarios
+  - Implements step definitions in Ruby/Cucumber
+
+### Linear Integration
+
+Connect Linear issues to GitHub for automated feature kickoff:
+
+1. **Configure Linear webhook** to send issues to GitHub repository dispatch endpoint
+2. **Issues sync automatically** with Linear context (priority, team, assignee)
+3. **Target repo routing** via issue body (`repo: owner/name`) or labels (`repo:owner/name`)
+4. **Copilot generates test plan** on issue creation
+
+See [.github/workflows/linear-webhook-handler.yml](.github/workflows/linear-webhook-handler.yml) for implementation details.
+
+### Workflow Files
+
+- [kickoff-feature-automation.yml](.github/workflows/kickoff-feature-automation.yml) - Auto-generates test plans on issue creation
+- [linear-webhook-handler.yml](.github/workflows/linear-webhook-handler.yml) - Syncs Linear issues to GitHub
+- [generate-test-plan.yml](.github/workflows/generate-test-plan.yml) - Legacy test plan generator (kept for compatibility)
 
 GitHub Actions automatically runs tests on:
 - Push to `main` or `develop`

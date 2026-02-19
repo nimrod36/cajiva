@@ -34,9 +34,11 @@ module Cajiva
       x_values = []
       y_values = []
 
+      # IMPORTANT: Use << (append) operator to add elements
+      # Do NOT use assignment (=) which would override previous values
       records.each_with_index do |record, index|
-        x_values << (index + 1)
-        y_values << record['temperature'].to_f
+        x_values << (index + 1) # Append day to x array
+        y_values << record['temperature'].to_f  # Append temperature to y array
       end
 
       [x_values, y_values]
