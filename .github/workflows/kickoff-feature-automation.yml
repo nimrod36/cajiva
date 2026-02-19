@@ -19,7 +19,7 @@ jobs:
       - name: Generate Feature Kickoff with Copilot
         uses: actions/github-script@v7
         env:
-          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_MODELS_TOKEN }}
+          MODELS_TOKEN: ${{ secrets.MODELS_TOKEN }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -39,48 +39,31 @@ jobs:
             }
             
             // Construct the system prompt for Copilot
-            const systemPrompt = `You are an expert BDD test plan generator following the kickoff-feature workflow.
+            const systemPrompt = 'You are an expert BDD test plan generator following the kickoff-feature workflow.\n\n' +
+              (kickoffPrompt || '') + '\n\n' +
+              'METHODOLOGY (from create-test-plan):\n' +
+              (createTestPlanPrompt || '') + '\n\n' +
+              'Generate comprehensive Gherkin scenarios following these principles:\n\n' +
+              '1. **Declarative Style**: Focus on behavior, not implementation\n' +
+              '2. **Three Amigos Perspective**: Product, Developer, and Tester perspectives\n' +
+              '3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios\n' +
+              '4. **Coverage**: Include happy paths, edge cases, error handling, data validation\n' +
+              '5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors\n\n' +
+              'Output a complete test plan with multiple scenarios covering all perspectives.';
             
-${kickoffPrompt || ''}
-
-METHODOLOGY (from create-test-plan):
-${createTestPlanPrompt || ''}
-
-Generate comprehensive Gherkin scenarios following these principles:
-
-1. **Declarative Style**: Focus on behavior, not implementation
-   - ❌ "When I click the calculate button"
-   - ✅ "When the system calculates regression on valid data"
-
-2. **Three Amigos Perspective**:
-   - Product: Business rules and happy paths
-   - Developer: Technical boundaries and state requirements
-   - Tester: Edge cases, race conditions, failure modes
-
-3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios
-
-4. **Coverage**: Include happy paths, edge cases, error handling, data validation
-
-5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors
-
-Output a complete test plan with multiple scenarios covering all perspectives.`;
             
-            const userPrompt = `Generate a comprehensive BDD test plan for this issue:
-
-**Title**: ${issueTitle}
-**Labels**: ${issueLabels || 'None'}
-
-**Description**:
-${issueBody}
-
-Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.`;
+            const userPrompt = 'Generate a comprehensive BDD test plan for this issue:\n\n' +
+              '**Title**: ' + issueTitle + '\n' +
+              '**Labels**: ' + (issueLabels || 'None') + '\n\n' +
+              '**Description**:\n' + issueBody + '\n\n' +
+              'Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.';
             
             try {
               // Call GitHub Models API (Copilot-powered)
-              const modelsToken = process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN;
+              const modelsToken = process.env.MODELS_TOKEN || process.env.GITHUB_TOKEN;
 
               if (!modelsToken) {
-                throw new Error('Missing token. Set GITHUB_MODELS_TOKEN secret.');
+                throw new Error('Missing token. Set MODELS_TOKEN secret.');
               }
 
               const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
@@ -109,19 +92,15 @@ Create detailed Gherkin scenarios with Feature description, Background (if neede
               const generatedContent = data.choices[0].message.content;
               
               // Post the result as a comment
-              const commentBody = `## 🤖 Copilot Feature Kickoff Complete
-
-${generatedContent}
-
----
-
-### Next Steps
-1. Review the test scenarios above
-2. Use [\`@copilot /add-test-coverage\`](.github/prompts/add-test-coverage.prompt.md) to extend coverage
-3. Implement step definitions in \`specs/*/step_definitions/\`
-4. Run tests with \`cucumber\`
-
-*Generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) prompt*`;
+              const commentBody = '## 🤖 Copilot Feature Kickoff Complete\n\n' +
+                generatedContent + '\n\n' +
+                '---\n\n' +
+                '### Next Steps\n' +
+                '1. Review the test scenarios above\n' +
+                '2. Use [`@copilot /add-test-coverage`](.github/prompts/add-test-coverage.prompt.md) to extend coverage\n' +
+                '3. Implement step definitions in `specs/*/step_definitions/`\n' +
+                '4. Run tests with `cucumber`\n\n' +
+                '*Generated using [`/kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) prompt*';
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -136,33 +115,27 @@ ${generatedContent}
               console.error('❌ Error generating feature kickoff:', error);
               
               // Fallback: Post manual template
-              const fallbackComment = `## ⚠️ Automated Feature Kickoff Failed
-
-Unable to automatically generate the test plan. Please manually apply:
-
-### Use Copilot Prompts:
-- [\`@copilot /kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) - Generate test plan
-- [\`@copilot /create-test-plan\`](.github/prompts/create-test-plan.prompt.md) - Create Gherkin scenarios
-
-### Manual Test Plan Template:
-
-\`\`\`gherkin
-Feature: ${issueTitle}
-  
-  Scenario: Happy path
-    Given [initial state]
-    When [action]
-    Then [expected outcome]
-  
-  Scenario: Error handling
-    Given [error condition]
-    When [action]
-    Then [error response]
-\`\`\`
-
----
-
-*Error: ${error.message}*`;
+              const fallbackComment = '## ⚠️ Automated Feature Kickoff Failed\n\n' +
+                'Unable to automatically generate the test plan. Please manually apply:\n\n' +
+                '### Use Copilot Prompts:\n' +
+                '- [`@copilot /kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) - Generate test plan\n' +
+                '- [`@copilot /create-test-plan`](.github/prompts/create-test-plan.prompt.md) - Create Gherkin scenarios\n\n' +
+                '### Manual Test Plan Template:\n\n' +
+                '```gherkin\n' +
+                'Feature: ' + issueTitle + '\n' +
+                '  \n' +
+                '  Scenario: Happy path\n' +
+                '    Given [initial state]\n' +
+                '    When [action]\n' +
+                '    Then [expected outcome]\n' +
+                '  \n' +
+                '  Scenario: Error handling\n' +
+                '    Given [error condition]\n' +
+                '    When [action]\n' +
+                '    Then [error response]\n' +
+                '```\n\n' +
+                '---\n\n' +
+                '*Error: ' + error.message + '*';
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
