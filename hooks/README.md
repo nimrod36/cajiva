@@ -14,5 +14,30 @@ cp hooks/pre-push .git/hooks/
 
 ## Hooks
 
-- **pre-commit**: Runs RSpec tests, Cucumber tests, and RuboCop linting before each commit
-- **pre-push**: Runs full RSpec and Cucumber test suites before pushing to remote
+### pre-commit
+Runs before each commit:
+- RSpec unit tests (10 examples)
+- Cucumber BDD scenarios (41 scenarios, 241 steps)
+- RuboCop linting
+
+**Skip with:**
+```bash
+SKIP_HOOKS=1 git commit -m "message"
+# or
+git commit --no-verify -m "message"
+```
+
+### pre-push
+Runs before pushing to remote:
+- RSpec test suite (with --fail-fast)
+- Cucumber test suite (with --fail-fast)
+- Test coverage analysis (warns if below 80%)
+
+**Skip with:**
+```bash
+SKIP_HOOKS=1 git push
+# or
+git push --no-verify
+```
+
+**Note:** Use skip options sparingly and only for emergency hotfixes!

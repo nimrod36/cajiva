@@ -1,7 +1,15 @@
 #!/bin/bash
 # Pre-commit hook: Run tests and linting before commit
+# Skip with: SKIP_HOOKS=1 git commit
+
+# Check if hooks should be skipped
+if [ "$SKIP_HOOKS" = "1" ] || [ "$NO_VERIFY" = "1" ]; then
+  echo "⚠️  Skipping pre-commit checks (SKIP_HOOKS=1)"
+  exit 0
+fi
 
 echo "🔍 Running pre-commit checks..."
+echo "(Skip with: SKIP_HOOKS=1 git commit or git commit --no-verify)"
 echo ""
 
 # Run RSpec tests
