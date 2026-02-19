@@ -82,21 +82,21 @@ jobs:
             }
             
             // Construct GitHub issue body with Linear context
+            const assigneeText = linearAssignee ? `**Assignee:** ${linearAssignee}\n` : '';
             const githubIssueBody = `## 🔗 From Linear Issue
-
-**Linear Issue:** [${linearIssueId}](${linearIssueUrl})
-**Team:** ${linearTeam}
-**State:** ${linearState}
-**Priority:** ${linearPriority} (${priorityLabels[linearPriority] || 'unknown'})
-${linearAssignee ? `**Assignee:** ${linearAssignee}` : ''}
-
----
-
-${linearIssueDescription}
-
----
-
-*This issue was automatically synced from Linear via webhook.*`;
+            
+            **Linear Issue:** [${linearIssueId}](${linearIssueUrl})
+            **Team:** ${linearTeam}
+            **State:** ${linearState}
+            **Priority:** ${linearPriority} (${priorityLabels[linearPriority] || 'unknown'})
+            ${assigneeText}
+            ---
+            
+            ${linearIssueDescription}
+            
+            ---
+            
+            *This issue was automatically synced from Linear via webhook.*`;
             
             // Create GitHub issue in target repo
             try {
@@ -115,9 +115,6 @@ ${linearIssueDescription}
               
               console.log(`✅ Created GitHub issue #${issue.data.number} in ${targetOwner}/${targetRepo}`);
               console.log(`Issue URL: ${issue.data.html_url}`);
-              
-              // Add a comment to the Linear issue (if webhook provides a way to do this)
-              // This would require Linear API integration
               
               console.log('🎯 kickoff-feature-automation workflow will automatically trigger');
               
