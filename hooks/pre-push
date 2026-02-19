@@ -1,7 +1,15 @@
 #!/bin/bash
 # Pre-push hook: Run full test suite before push
+# Skip with: SKIP_HOOKS=1 git push
+
+# Check if hooks should be skipped
+if [ "$SKIP_HOOKS" = "1" ] || [ "$NO_VERIFY" = "1" ]; then
+  echo "⚠️  Skipping pre-push checks (SKIP_HOOKS=1)"
+  exit 0
+fi
 
 echo "🚀 Running pre-push checks..."
+echo "(Skip with: SKIP_HOOKS=1 git push or git push --no-verify)"
 echo ""
 
 # Run RSpec tests
@@ -19,6 +27,33 @@ bundle exec cucumber specs/ --fail-fast
 if [ $? -ne 0 ]; then
   echo "❌ Cucumber tests failed! Push aborted."
   exit 1
+fi
+
+# Run test coverage check
+echo ""
+echo "Running test coverage analysis..."
+bundle exec rspec --format documentation --format json --out tmp/rspec_results.json
+if [ $? -ne 0 ]; then
+  echo "❌ Coverage check failed! Push aborted."
+  exit 1
+fi
+
+# Check SimpleCov coverage (if available)
+if [ -f "coverage/.last_run.json" ]; then
+  COVERAGE=$(ruby -rjson -e 'puts JSON.parse(File.read("coverage/.last_run.json"))["result"]["line"]' 2>/dev/null)
+  if [ ! -z "$COVERAGE" ]; then
+    COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
+    echo "📊 Test coverage: ${COVERAGE}%"
+    if [ "$COVERAGE_INT" -lt 80 ]; then
+      echo "⚠️  Warning: Coverage is below 80% (currently ${COVERAGE}%)"
+      echo "   Consider adding more tests before pushing."
+      # Uncomment to enforce:
+      # echo "❌ Coverage requirement not met! Push aborted."
+      # exit 1
+    else
+      echo "✅ Coverage requirement met (${COVERAGE}% >= 80%)"
+    fi
+  fi
 fi
 
 echo ""
