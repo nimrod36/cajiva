@@ -31,7 +31,9 @@ git commit --no-verify -m "message"
 Runs before pushing to remote:
 - RSpec test suite (with --fail-fast)
 - Cucumber test suite (with --fail-fast)
-- Test coverage analysis (warns if below 80%)
+- Test coverage analysis:
+  - **main/master branches:** 100% coverage REQUIRED (blocks push if not met)
+  - **Feature branches:** 80% coverage recommended (warning only)
 
 **Skip with:**
 ```bash

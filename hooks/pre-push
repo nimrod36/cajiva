@@ -29,6 +29,24 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Detect target branch (main/master requires 100% coverage)
+TARGET_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+REMOTE_BRANCH=""
+while read local_ref local_sha remote_ref remote_sha; do
+  REMOTE_BRANCH=$(echo "$remote_ref" | sed 's#refs/heads/##')
+done
+
+# Determine coverage requirement
+if [ "$TARGET_BRANCH" = "main" ] || [ "$TARGET_BRANCH" = "master" ] || [ "$REMOTE_BRANCH" = "main" ] || [ "$REMOTE_BRANCH" = "master" ]; then
+  REQUIRED_COVERAGE=100
+  IS_MAIN_BRANCH=true
+  echo "🎯 Pushing to main/master branch - 100% coverage required"
+else
+  REQUIRED_COVERAGE=80
+  IS_MAIN_BRANCH=false
+  echo "📊 Pushing to feature branch - 80% coverage recommended"
+fi
+
 # Run test coverage check
 echo ""
 echo "Running test coverage analysis..."
@@ -44,14 +62,19 @@ if [ -f "coverage/.last_run.json" ]; then
   if [ ! -z "$COVERAGE" ]; then
     COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
     echo "📊 Test coverage: ${COVERAGE}%"
-    if [ "$COVERAGE_INT" -lt 80 ]; then
-      echo "⚠️  Warning: Coverage is below 80% (currently ${COVERAGE}%)"
-      echo "   Consider adding more tests before pushing."
-      # Uncomment to enforce:
-      # echo "❌ Coverage requirement not met! Push aborted."
-      # exit 1
+    
+    if [ "$COVERAGE_INT" -lt "$REQUIRED_COVERAGE" ]; then
+      if [ "$IS_MAIN_BRANCH" = true ]; then
+        echo "❌ Coverage requirement not met for main/master!"
+        echo "   Required: ${REQUIRED_COVERAGE}%, Current: ${COVERAGE}%"
+        echo "   All code merged to main/master must have 100% test coverage."
+        exit 1
+      else
+        echo "⚠️  Warning: Coverage is below ${REQUIRED_COVERAGE}% (currently ${COVERAGE}%)"
+        echo "   Consider adding more tests before pushing."
+      fi
     else
-      echo "✅ Coverage requirement met (${COVERAGE}% >= 80%)"
+      echo "✅ Coverage requirement met (${COVERAGE}% >= ${REQUIRED_COVERAGE}%)"
     fi
   fi
 fi
