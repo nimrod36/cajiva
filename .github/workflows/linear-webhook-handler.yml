@@ -1,0 +1,128 @@
+name: Linear Issue Sync
+
+on:
+  repository_dispatch:
+    types: [linear-issue-created]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-github-issue:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse Linear Payload and Create GitHub Issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Parse Linear webhook payload
+            const linearPayload = context.payload.client_payload;
+            
+            const linearIssueTitle = linearPayload.data?.title || 'Untitled Issue';
+            const linearIssueDescription = linearPayload.data?.description || '';
+            const linearIssueUrl = linearPayload.data?.url || '';
+            const linearIssueId = linearPayload.data?.id || '';
+            const linearTeam = linearPayload.data?.team?.name || 'Unknown';
+            const linearPriority = linearPayload.data?.priority || 0;
+            const linearState = linearPayload.data?.state?.name || 'Unknown';
+            const linearLabels = linearPayload.data?.labels?.map(l => l.name) || [];
+            const linearAssignee = linearPayload.data?.assignee?.name || null;
+            
+            console.log('📥 Received Linear webhook payload');
+            console.log(`Issue: ${linearIssueTitle} (${linearIssueId})`);
+            console.log(`Priority: ${linearPriority}, State: ${linearState}`);
+            
+            // Extract target repo from Linear issue body or labels
+            // Format: "repo: owner/repo-name" or label "repo:owner/repo-name"
+            let targetOwner = context.repo.owner;
+            let targetRepo = context.repo.repo;
+            
+            const repoMatch = linearIssueDescription.match(/repo:\s*([^\/\s]+)\/([^\s]+)/i);
+            if (repoMatch) {
+              targetOwner = repoMatch[1];
+              targetRepo = repoMatch[2];
+              console.log(`📍 Target repo from description: ${targetOwner}/${targetRepo}`);
+            } else {
+              const repoLabel = linearLabels.find(l => l.startsWith('repo:'));
+              if (repoLabel) {
+                const parts = repoLabel.split(':')[1].split('/');
+                targetOwner = parts[0];
+                targetRepo = parts[1];
+                console.log(`📍 Target repo from label: ${targetOwner}/${targetRepo}`);
+              } else {
+                console.log(`📍 Using default repo: ${targetOwner}/${targetRepo}`);
+              }
+            }
+            
+            // Map Linear priority to GitHub labels
+            const priorityLabels = {
+              0: 'priority: none',
+              1: 'priority: urgent',
+              2: 'priority: high',
+              3: 'priority: medium',
+              4: 'priority: low'
+            };
+            
+            // Determine issue type from Linear labels or title
+            let issueType = 'feature';
+            if (linearLabels.some(l => l.toLowerCase().includes('bug'))) {
+              issueType = 'bug';
+            } else if (linearLabels.some(l => l.toLowerCase().includes('enhancement'))) {
+              issueType = 'enhancement';
+            } else if (linearIssueTitle.toLowerCase().startsWith('bug:')) {
+              issueType = 'bug';
+            } else if (linearIssueTitle.toLowerCase().startsWith('feature:')) {
+              issueType = 'feature';
+            }
+            
+            // Construct GitHub issue body with Linear context
+            const githubIssueBody = `## 🔗 From Linear Issue
+
+**Linear Issue:** [${linearIssueId}](${linearIssueUrl})
+**Team:** ${linearTeam}
+**State:** ${linearState}
+**Priority:** ${linearPriority} (${priorityLabels[linearPriority] || 'unknown'})
+${linearAssignee ? `**Assignee:** ${linearAssignee}` : ''}
+
+---
+
+${linearIssueDescription}
+
+---
+
+*This issue was automatically synced from Linear via webhook.*`;
+            
+            // Create GitHub issue in target repo
+            try {
+              const issue = await github.rest.issues.create({
+                owner: targetOwner,
+                repo: targetRepo,
+                title: linearIssueTitle,
+                body: githubIssueBody,
+                labels: [
+                  'from-linear',
+                  issueType,
+                  priorityLabels[linearPriority] || 'priority: none',
+                  ...linearLabels.filter(l => !l.startsWith('repo:'))
+                ]
+              });
+              
+              console.log(`✅ Created GitHub issue #${issue.data.number} in ${targetOwner}/${targetRepo}`);
+              console.log(`Issue URL: ${issue.data.html_url}`);
+              
+              // Add a comment to the Linear issue (if webhook provides a way to do this)
+              // This would require Linear API integration
+              
+              console.log('🎯 kickoff-feature-automation workflow will automatically trigger');
+              
+            } catch (error) {
+              console.error('❌ Error creating GitHub issue:', error);
+              console.error('Error details:', error.message);
+              throw error;
+            }

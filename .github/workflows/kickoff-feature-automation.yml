@@ -1,0 +1,173 @@
+name: Kickoff Feature Automation
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  kickoff-feature:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Feature Kickoff with Copilot
+        uses: actions/github-script@v7
+        env:
+          GITHUB_MODELS_TOKEN: ${{ secrets.GITHUB_MODELS_TOKEN }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueBody = context.payload.issue.body || '';
+            const issueTitle = context.payload.issue.title || '';
+            const issueLabels = context.payload.issue.labels.map(l => l.name).join(', ');
+            
+            // Read the kickoff-feature and create-test-plan prompts
+            const fs = require('fs');
+            
+            let kickoffPrompt, createTestPlanPrompt;
+            try {
+              kickoffPrompt = fs.readFileSync('.github/prompts/kickoff-feature.prompt.md', 'utf8');
+              createTestPlanPrompt = fs.readFileSync('.github/prompts/create-test-plan.prompt.md', 'utf8');
+            } catch (error) {
+              console.log('Could not read prompt files, using inline prompts');
+            }
+            
+            // Construct the system prompt for Copilot
+            const systemPrompt = `You are an expert BDD test plan generator following the kickoff-feature workflow.
+            
+${kickoffPrompt || ''}
+
+METHODOLOGY (from create-test-plan):
+${createTestPlanPrompt || ''}
+
+Generate comprehensive Gherkin scenarios following these principles:
+
+1. **Declarative Style**: Focus on behavior, not implementation
+   - ❌ "When I click the calculate button"
+   - ✅ "When the system calculates regression on valid data"
+
+2. **Three Amigos Perspective**:
+   - Product: Business rules and happy paths
+   - Developer: Technical boundaries and state requirements
+   - Tester: Edge cases, race conditions, failure modes
+
+3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios
+
+4. **Coverage**: Include happy paths, edge cases, error handling, data validation
+
+5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors
+
+Output a complete test plan with multiple scenarios covering all perspectives.`;
+            
+            const userPrompt = `Generate a comprehensive BDD test plan for this issue:
+
+**Title**: ${issueTitle}
+**Labels**: ${issueLabels || 'None'}
+
+**Description**:
+${issueBody}
+
+Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.`;
+            
+            try {
+              // Call GitHub Models API (Copilot-powered)
+              const modelsToken = process.env.GITHUB_MODELS_TOKEN || process.env.GITHUB_TOKEN;
+
+              if (!modelsToken) {
+                throw new Error('Missing token. Set GITHUB_MODELS_TOKEN secret.');
+              }
+
+              const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${modelsToken}`
+                },
+                body: JSON.stringify({
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                  ],
+                  model: 'gpt-4o',
+                  temperature: 0.7,
+                  max_tokens: 4000
+                })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API call failed: ${response.status} ${response.statusText}\n${errorText}`);
+              }
+              
+              const data = await response.json();
+              const generatedContent = data.choices[0].message.content;
+              
+              // Post the result as a comment
+              const commentBody = `## 🤖 Copilot Feature Kickoff Complete
+
+${generatedContent}
+
+---
+
+### Next Steps
+1. Review the test scenarios above
+2. Use [\`@copilot /add-test-coverage\`](.github/prompts/add-test-coverage.prompt.md) to extend coverage
+3. Implement step definitions in \`specs/*/step_definitions/\`
+4. Run tests with \`cucumber\`
+
+*Generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) prompt*`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: commentBody
+              });
+              
+              console.log('✅ Feature kickoff completed successfully');
+              
+            } catch (error) {
+              console.error('❌ Error generating feature kickoff:', error);
+              
+              // Fallback: Post manual template
+              const fallbackComment = `## ⚠️ Automated Feature Kickoff Failed
+
+Unable to automatically generate the test plan. Please manually apply:
+
+### Use Copilot Prompts:
+- [\`@copilot /kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) - Generate test plan
+- [\`@copilot /create-test-plan\`](.github/prompts/create-test-plan.prompt.md) - Create Gherkin scenarios
+
+### Manual Test Plan Template:
+
+\`\`\`gherkin
+Feature: ${issueTitle}
+  
+  Scenario: Happy path
+    Given [initial state]
+    When [action]
+    Then [expected outcome]
+  
+  Scenario: Error handling
+    Given [error condition]
+    When [action]
+    Then [error response]
+\`\`\`
+
+---
+
+*Error: ${error.message}*`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: fallbackComment
+              });
+            }
