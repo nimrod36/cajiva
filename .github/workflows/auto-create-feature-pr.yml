@@ -183,42 +183,31 @@ jobs:
               console.log('✅ Created step definitions stub');
               
               // Create Pull Request
-              const prBody = `## 🤖 Auto-generated Feature from Issue #${issueNumber}
-
-**Issue**: #${issueNumber}
-**Feature File**: \`${featureFilePath}\`
-**Step Definitions**: \`${stepDefsFile}\`
-
-### Generated BDD Test Plan
-
-This PR contains:
-- ✅ Gherkin feature file with comprehensive scenarios
-- ✅ Step definitions stub file (needs implementation)
-
-### Test Plan Preview
-
-\`\`\`gherkin
-${generatedContent.split('\n').slice(0, 30).join('\n')}
-${generatedContent.split('\n').length > 30 ? '...' : ''}
-\`\`\`
-
-### Next Steps
-
-1. **Review the scenarios** in [\`${featureFilePath}\`](../blob/${branchName}/${featureFilePath})
-2. **Implement step definitions** in [\`${stepDefsFile}\`](../blob/${branchName}/${stepDefsFile})
-3. **Run tests**: \`cucumber ${featureFilePath}\`
-4. **Refine as needed** based on feedback
-
-### Three Amigos Review
-
-- [ ] **Product**: Scenarios match business requirements
-- [ ] **Developer**: Scenarios are implementable
-- [ ] **QA**: Coverage includes happy paths and edge cases
-
----
-
-*Auto-generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) prompt*
-*Closes #${issueNumber} once merged*`;
+              const prBody = '## 🤖 Auto-generated Feature from Issue #' + issueNumber + '\n\n' +
+                '**Issue**: #' + issueNumber + '\n' +
+                '**Feature File**: `' + featureFilePath + '`\n' +
+                '**Step Definitions**: `' + stepDefsFile + '`\n\n' +
+                '### Generated BDD Test Plan\n\n' +
+                'This PR contains:\n' +
+                '- ✅ Gherkin feature file with comprehensive scenarios\n' +
+                '- ✅ Step definitions stub file (needs implementation)\n\n' +
+                '### Test Plan Preview\n\n' +
+                '```gherkin\n' +
+                generatedContent.split('\n').slice(0, 30).join('\n') + '\n' +
+                (generatedContent.split('\n').length > 30 ? '...\n' : '') +
+                '```\n\n' +
+                '### Next Steps\n\n' +
+                '1. **Review the scenarios** in [`' + featureFilePath + '`](../blob/' + branchName + '/' + featureFilePath + ')\n' +
+                '2. **Implement step definitions** in [`' + stepDefsFile + '`](../blob/' + branchName + '/' + stepDefsFile + ')\n' +
+                '3. **Run tests**: `cucumber ' + featureFilePath + '`\n' +
+                '4. **Refine as needed** based on feedback\n\n' +
+                '### Three Amigos Review\n\n' +
+                '- [ ] **Product**: Scenarios match business requirements\n' +
+                '- [ ] **Developer**: Scenarios are implementable\n' +
+                '- [ ] **QA**: Coverage includes happy paths and edge cases\n\n' +
+                '---\n\n' +
+                '*Auto-generated using [`/kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) prompt*\n' +
+                '*Closes #' + issueNumber + ' once merged*';
 
               const { data: pr } = await github.rest.pulls.create({
                 owner: context.repo.owner,
@@ -240,22 +229,17 @@ ${generatedContent.split('\n').length > 30 ? '...' : ''}
               });
               
               // Comment on the original issue with PR link
-              const issueComment = `## 🤖 Feature Automation Complete
-
-✅ **Pull Request Created**: #${pr.number}
-✅ **Branch**: \`${branchName}\`
-✅ **Feature File**: \`${featureFilePath}\`
-
-### What was created:
-- Comprehensive Gherkin feature file with scenarios
-- Step definitions stub file for implementation
-- Pull request ready for review
-
-👉 **Review the PR here**: #${pr.number}
-
----
-
-*Generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) automation*`;
+              const issueComment = '## 🤖 Feature Automation Complete\n\n' +
+                '✅ **Pull Request Created**: #' + pr.number + '\n' +
+                '✅ **Branch**: `' + branchName + '`\n' +
+                '✅ **Feature File**: `' + featureFilePath + '`\n\n' +
+                '### What was created:\n' +
+                '- Comprehensive Gherkin feature file with scenarios\n' +
+                '- Step definitions stub file for implementation\n' +
+                '- Pull request ready for review\n\n' +
+                '👉 **Review the PR here**: #' + pr.number + '\n\n' +
+                '---\n\n' +
+                '*Generated using [`/kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) automation*';
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -270,21 +254,16 @@ ${generatedContent.split('\n').length > 30 ? '...' : ''}
               console.error('❌ Error in automation:', error);
               
               // Post error comment to issue
-              const errorComment = `## ⚠️ Automated Feature PR Creation Failed
-
-Unable to automatically create the feature file and pull request.
-
-**Error**: ${error.message}
-
-### Manual Steps:
-1. Use [\`@copilot /kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) to generate test plan
-2. Create feature file in \`specs/\` directory
-3. Implement step definitions
-4. Create pull request manually
-
----
-
-*Error occurred during automation. Please proceed manually.*`;
+              const errorComment = '## ⚠️ Automated Feature PR Creation Failed\n\n' +
+                'Unable to automatically create the feature file and pull request.\n\n' +
+                '**Error**: ' + error.message + '\n\n' +
+                '### Manual Steps:\n' +
+                '1. Use [`@copilot /kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) to generate test plan\n' +
+                '2. Create feature file in `specs/` directory\n' +
+                '3. Implement step definitions\n' +
+                '4. Create pull request manually\n\n' +
+                '---\n\n' +
+                '*Error occurred during automation. Please proceed manually.*';
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
