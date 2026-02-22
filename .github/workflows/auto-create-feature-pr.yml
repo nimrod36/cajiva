@@ -1,0 +1,297 @@
+name: Auto-Create Feature PR
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-feature-pr:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Feature File and Create PR
+        uses: actions/github-script@v7
+        env:
+          MODELS_TOKEN: ${{ secrets.MODELS_TOKEN }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueBody = context.payload.issue.body || '';
+            const issueTitle = context.payload.issue.title || '';
+            const issueNumber = context.payload.issue.number;
+            const issueLabels = context.payload.issue.labels.map(l => l.name).join(', ');
+            
+            // Create branch name from issue
+            const branchName = `feature/issue-${issueNumber}-${issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50)}`;
+            
+            // Create feature file name
+            const featureFileName = issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
+            const featureFilePath = `specs/${featureFileName}/${featureFileName}.feature`;
+            
+            console.log(`Creating branch: ${branchName}`);
+            console.log(`Feature file: ${featureFilePath}`);
+            
+            // Read the kickoff-feature and create-test-plan prompts
+            const fs = require('fs');
+            
+            let kickoffPrompt, createTestPlanPrompt;
+            try {
+              kickoffPrompt = fs.readFileSync('.github/prompts/kickoff-feature.prompt.md', 'utf8');
+              createTestPlanPrompt = fs.readFileSync('.github/prompts/create-test-plan.prompt.md', 'utf8');
+            } catch (error) {
+              console.log('Could not read prompt files, using inline prompts');
+            }
+            
+            // Construct the system prompt for Copilot
+            const systemPrompt = 'You are an expert BDD test plan generator following the kickoff-feature workflow.\n\n' +
+              (kickoffPrompt || '') + '\n\n' +
+              'METHODOLOGY (from create-test-plan):\n' +
+              (createTestPlanPrompt || '') + '\n\n' +
+              'Generate comprehensive Gherkin scenarios following these principles:\n\n' +
+              '1. **Declarative Style**: Focus on behavior, not implementation\n' +
+              '2. **Three Amigos Perspective**: Product, Developer, and Tester perspectives\n' +
+              '3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios\n' +
+              '4. **Coverage**: Include happy paths, edge cases, error handling, data validation\n' +
+              '5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors\n\n' +
+              'Output ONLY the Gherkin feature file content, no markdown formatting or explanations.';
+            
+            const userPrompt = 'Generate a comprehensive BDD test plan for this issue:\n\n' +
+              '**Title**: ' + issueTitle + '\n' +
+              '**Labels**: ' + (issueLabels || 'None') + '\n\n' +
+              '**Description**:\n' + issueBody + '\n\n' +
+              'Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.\n\n' +
+              'Output ONLY the Gherkin content starting with "Feature:", no markdown code blocks.';
+            
+            try {
+              // Call GitHub Models API (Copilot-powered)
+              const modelsToken = process.env.MODELS_TOKEN || process.env.GITHUB_TOKEN;
+
+              if (!modelsToken) {
+                throw new Error('Missing token. Set MODELS_TOKEN secret.');
+              }
+
+              const response = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${modelsToken}`
+                },
+                body: JSON.stringify({
+                  messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                  ],
+                  model: 'gpt-4o',
+                  temperature: 0.7,
+                  max_tokens: 4000
+                })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API call failed: ${response.status} ${response.statusText}\n${errorText}`);
+              }
+              
+              const data = await response.json();
+              let generatedContent = data.choices[0].message.content;
+              
+              // Clean up content - remove markdown code blocks if present
+              generatedContent = generatedContent.replace(/```gherkin\n?/g, '').replace(/```\n?$/g, '').trim();
+              
+              console.log('✅ Generated feature content');
+              
+              // Get default branch
+              const { data: repo } = await github.rest.repos.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              const defaultBranch = repo.default_branch;
+              
+              // Get the SHA of the default branch
+              const { data: refData } = await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${defaultBranch}`
+              });
+              const baseSha = refData.object.sha;
+              
+              // Create new branch
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/heads/${branchName}`,
+                sha: baseSha
+              });
+              
+              console.log('✅ Created branch');
+              
+              // Create the feature file
+              const featureContent = Buffer.from(generatedContent).toString('base64');
+              
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: featureFilePath,
+                message: `Add feature file for issue #${issueNumber}: ${issueTitle}`,
+                content: featureContent,
+                branch: branchName
+              });
+              
+              console.log('✅ Created feature file');
+              
+              // Create step definitions stub file
+              const stepDefsDir = `specs/${featureFileName}/step_definitions`;
+              const stepDefsFile = `${stepDefsDir}/${featureFileName}_steps.rb`;
+              
+              const stepDefsContent = `# Step definitions for ${issueTitle}
+# Generated from issue #${issueNumber}
+
+# Implement your step definitions here
+# Example:
+# Given('initial state') do
+#   # Setup code
+# end
+#
+# When('action is performed') do
+#   # Action code
+# end
+#
+# Then('expected outcome occurs') do
+#   # Assertion code
+# end
+`;
+              
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: stepDefsFile,
+                message: `Add step definitions stub for issue #${issueNumber}`,
+                content: Buffer.from(stepDefsContent).toString('base64'),
+                branch: branchName
+              });
+              
+              console.log('✅ Created step definitions stub');
+              
+              // Create Pull Request
+              const prBody = `## 🤖 Auto-generated Feature from Issue #${issueNumber}
+
+**Issue**: #${issueNumber}
+**Feature File**: \`${featureFilePath}\`
+**Step Definitions**: \`${stepDefsFile}\`
+
+### Generated BDD Test Plan
+
+This PR contains:
+- ✅ Gherkin feature file with comprehensive scenarios
+- ✅ Step definitions stub file (needs implementation)
+
+### Test Plan Preview
+
+\`\`\`gherkin
+${generatedContent.split('\n').slice(0, 30).join('\n')}
+${generatedContent.split('\n').length > 30 ? '...' : ''}
+\`\`\`
+
+### Next Steps
+
+1. **Review the scenarios** in [\`${featureFilePath}\`](../blob/${branchName}/${featureFilePath})
+2. **Implement step definitions** in [\`${stepDefsFile}\`](../blob/${branchName}/${stepDefsFile})
+3. **Run tests**: \`cucumber ${featureFilePath}\`
+4. **Refine as needed** based on feedback
+
+### Three Amigos Review
+
+- [ ] **Product**: Scenarios match business requirements
+- [ ] **Developer**: Scenarios are implementable
+- [ ] **QA**: Coverage includes happy paths and edge cases
+
+---
+
+*Auto-generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) prompt*
+*Closes #${issueNumber} once merged*`;
+
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Feature: ${issueTitle}`,
+                head: branchName,
+                base: defaultBranch,
+                body: prBody
+              });
+              
+              console.log('✅ Created pull request');
+              
+              // Assign the PR to Copilot (if possible) or link to issue
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['auto-generated', 'bdd-test-plan']
+              });
+              
+              // Comment on the original issue with PR link
+              const issueComment = `## 🤖 Feature Automation Complete
+
+✅ **Pull Request Created**: #${pr.number}
+✅ **Branch**: \`${branchName}\`
+✅ **Feature File**: \`${featureFilePath}\`
+
+### What was created:
+- Comprehensive Gherkin feature file with scenarios
+- Step definitions stub file for implementation
+- Pull request ready for review
+
+👉 **Review the PR here**: #${pr.number}
+
+---
+
+*Generated using [\`/kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) automation*`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: issueComment
+              });
+              
+              console.log('✅ All automation steps completed successfully');
+              
+            } catch (error) {
+              console.error('❌ Error in automation:', error);
+              
+              // Post error comment to issue
+              const errorComment = `## ⚠️ Automated Feature PR Creation Failed
+
+Unable to automatically create the feature file and pull request.
+
+**Error**: ${error.message}
+
+### Manual Steps:
+1. Use [\`@copilot /kickoff-feature\`](.github/prompts/kickoff-feature.prompt.md) to generate test plan
+2. Create feature file in \`specs/\` directory
+3. Implement step definitions
+4. Create pull request manually
+
+---
+
+*Error occurred during automation. Please proceed manually.*`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: errorComment
+              });
+              
+              throw error;
+            }
