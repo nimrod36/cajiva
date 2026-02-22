@@ -32,14 +32,14 @@ jobs:
             const issueLabels = context.payload.issue.labels.map(l => l.name).join(', ');
             
             // Create branch name from issue
-            const branchName = `feature/issue-${issueNumber}-${issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50)}`;
+            const branchName = 'feature/issue-' + issueNumber + '-' + issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
             
             // Create feature file name
             const featureFileName = issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
-            const featureFilePath = `specs/${featureFileName}/${featureFileName}.feature`;
+            const featureFilePath = 'specs/' + featureFileName + '/' + featureFileName + '.feature';
             
-            console.log(`Creating branch: ${branchName}`);
-            console.log(`Feature file: ${featureFilePath}`);
+            console.log('Creating branch: ' + branchName);
+            console.log('Feature file: ' + featureFilePath);
             
             // Read the kickoff-feature and create-test-plan prompts
             const fs = require('fs');
@@ -84,7 +84,7 @@ jobs:
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${modelsToken}`
+                  'Authorization': 'Bearer ' + modelsToken
                 },
                 body: JSON.stringify({
                   messages: [
@@ -99,7 +99,7 @@ jobs:
               
               if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`API call failed: ${response.status} ${response.statusText}\n${errorText}`);
+                throw new Error('API call failed: ' + response.status + ' ' + response.statusText + '\n' + errorText);
               }
               
               const data = await response.json();
@@ -121,7 +121,7 @@ jobs:
               const { data: refData } = await github.rest.git.getRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: `heads/${defaultBranch}`
+                ref: 'heads/' + defaultBranch
               });
               const baseSha = refData.object.sha;
               
@@ -129,7 +129,7 @@ jobs:
               await github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                ref: `refs/heads/${branchName}`,
+                ref: 'refs/heads/' + branchName,
                 sha: baseSha
               });
               
@@ -142,7 +142,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 path: featureFilePath,
-                message: `Add feature file for issue #${issueNumber}: ${issueTitle}`,
+                message: 'Add feature file for issue #' + issueNumber + ': ' + issueTitle,
                 content: featureContent,
                 branch: branchName
               });
@@ -150,32 +150,30 @@ jobs:
               console.log('✅ Created feature file');
               
               // Create step definitions stub file
-              const stepDefsDir = `specs/${featureFileName}/step_definitions`;
-              const stepDefsFile = `${stepDefsDir}/${featureFileName}_steps.rb`;
+              const stepDefsDir = 'specs/' + featureFileName + '/step_definitions';
+              const stepDefsFile = stepDefsDir + '/' + featureFileName + '_steps.rb';
               
-              const stepDefsContent = `# Step definitions for ${issueTitle}
-# Generated from issue #${issueNumber}
-
-# Implement your step definitions here
-# Example:
-# Given('initial state') do
-#   # Setup code
-# end
-#
-# When('action is performed') do
-#   # Action code
-# end
-#
-# Then('expected outcome occurs') do
-#   # Assertion code
-# end
-`;
+              const stepDefsContent = '# Step definitions for ' + issueTitle + '\n' +
+                '# Generated from issue #' + issueNumber + '\n\n' +
+                '# Implement your step definitions here\n' +
+                '# Example:\n' +
+                '# Given(\'initial state\') do\n' +
+                '#   # Setup code\n' +
+                '# end\n' +
+                '#\n' +
+                '# When(\'action is performed\') do\n' +
+                '#   # Action code\n' +
+                '# end\n' +
+                '#\n' +
+                '# Then(\'expected outcome occurs\') do\n' +
+                '#   # Assertion code\n' +
+                '# end\n';
               
               await github.rest.repos.createOrUpdateFileContents({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 path: stepDefsFile,
-                message: `Add step definitions stub for issue #${issueNumber}`,
+                message: 'Add step definitions stub for issue #' + issueNumber,
                 content: Buffer.from(stepDefsContent).toString('base64'),
                 branch: branchName
               });
@@ -212,7 +210,7 @@ jobs:
               const { data: pr } = await github.rest.pulls.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: `Feature: ${issueTitle}`,
+                title: 'Feature: ' + issueTitle,
                 head: branchName,
                 base: defaultBranch,
                 body: prBody
