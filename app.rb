@@ -113,6 +113,66 @@ post '/api/recalculate' do
   end
 end
 
+# API endpoint to delete a data point
+delete '/api/data/:index' do
+  content_type :json
+
+  begin
+    index = params[:index].to_i
+
+    request.body.rewind
+    body_params = JSON.parse(request.body.read)
+    data_points = body_params['data']
+
+    if index < 0 || index >= data_points.length
+      status 400
+      return { error: 'Invalid index' }.to_json
+    end
+
+    # Remove the data point at the specified index
+    deleted_point = data_points.delete_at(index)
+
+    # Extract x and y values
+    x = data_points.map { |point| point['x'] }
+    y = data_points.map { |point| point['y'] }
+
+    if x.empty? || y.empty?
+      # Return empty regression if no data points left
+      return {
+        actual: [],
+        regression: [],
+        equation: 'No data',
+        r_squared: 0,
+        slope: 0,
+        intercept: 0,
+        deleted: deleted_point
+      }.to_json
+    end
+
+    # Recalculate regression with remaining points
+    model = Cajiva::LinearRegression.new(x, y)
+
+    # Generate regression line points
+    regression_line = x.map { |day| { x: day, y: model.predict(day).round(2) } }
+
+    # Format actual data points
+    actual_data = x.zip(y).map { |day, temp| { x: day, y: temp.round(2) } }
+
+    {
+      actual: actual_data,
+      regression: regression_line,
+      equation: model.equation,
+      r_squared: model.r_squared.round(4),
+      slope: model.slope.round(4),
+      intercept: model.intercept.round(4),
+      deleted: deleted_point
+    }.to_json
+  rescue StandardError => e
+    status 500
+    { error: e.message }.to_json
+  end
+end
+
 get '/' do
   send_file File.join(settings.public_folder, 'index.html')
 end

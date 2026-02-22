@@ -173,6 +173,95 @@
             font-size: 0.8em;
             background: #dc3545;
         }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification-close {
+            margin-left: 15px;
+            cursor: pointer;
+            opacity: 0.8;
+            float: right;
+        }
+
+        .notification-close:hover {
+            opacity: 1;
+        }
+
+        /* Undo button in notification */
+        .notification button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .notification button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Delete icon overlay */
+        .delete-overlay {
+            position: absolute;
+            display: none;
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 100;
+            pointer-events: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .delete-overlay:hover {
+            background: rgba(244, 67, 54, 1);
+        }
+
+        .delete-overlay::before {
+            content: '🗑️ ';
+        }
     </style>
 </head>
 <body>
@@ -203,8 +292,9 @@
 
         <div class="card">
             <h2>Temperature Trend</h2>
-            <div class="chart-container">
+            <div class="chart-container" id="chartContainer" style="position: relative;">
                 <canvas id="regressionChart"></canvas>
+                <div id="deleteOverlay" class="delete-overlay">Delete</div>
             </div>
             
             <div class="input-section">
@@ -227,6 +317,37 @@
             regression: [],
             newPoints: []
         };
+        let deleteEnabled = true;
+        let undoStack = [];
+        let hoveredPointIndex = null;
+
+        // Notification system
+        function showNotification(message, type = 'info', options = {}) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            let content = `<span>${message}</span>`;
+            
+            if (options.showUndo) {
+                content += `<button onclick="undoDelete()">Undo</button>`;
+            }
+            
+            content += `<span class="notification-close" onclick="this.parentElement.remove()">✕</span>`;
+            notification.innerHTML = content;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds (unless undo is available)
+            if (!options.showUndo) {
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 5000);
+            }
+            
+            return notification;
+        }
 
         async function loadData() {
             try {
@@ -270,7 +391,10 @@
                     backgroundColor: 'rgba(102, 126, 234, 0.6)',
                     borderColor: 'rgba(102, 126, 234, 1)',
                     pointRadius: 6,
-                    pointHoverRadius: 8
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    pointHoverBorderColor: 'rgba(255, 99, 132, 1)',
+                    pointHoverBorderWidth: 2
                 }
             ];
 
@@ -282,7 +406,10 @@
                     backgroundColor: 'rgba(76, 175, 80, 0.6)',
                     borderColor: 'rgba(76, 175, 80, 1)',
                     pointRadius: 8,
-                    pointHoverRadius: 10
+                    pointHoverRadius: 10,
+                    pointHoverBackgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    pointHoverBorderColor: 'rgba(255, 99, 132, 1)',
+                    pointHoverBorderWidth: 2
                 });
             }
 
@@ -310,6 +437,9 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onHover: (event, activeElements) => {
+                        handleChartHover(event, activeElements);
+                    },
                     plugins: {
                         title: {
                             display: true,
@@ -319,6 +449,13 @@
                         legend: {
                             display: true,
                             position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Day ${context.parsed.x}: ${context.parsed.y}°C`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -343,6 +480,183 @@
                     }
                 }
             });
+        }
+
+        function handleChartHover(event, activeElements) {
+            const deleteOverlay = document.getElementById('deleteOverlay');
+            
+            if (!deleteEnabled) {
+                deleteOverlay.style.display = 'none';
+                hoveredPointIndex = null;
+                return;
+            }
+
+            // Check if hovering over a data point (not regression line)
+            if (activeElements.length > 0) {
+                const element = activeElements[0];
+                const datasetIndex = element.datasetIndex;
+                
+                // Only show delete for actual data points (not regression line)
+                if (datasetIndex < 2) { // First two datasets are actual data points
+                    const pointIndex = element.index;
+                    const dataset = chart.data.datasets[datasetIndex];
+                    const point = dataset.data[pointIndex];
+                    
+                    // Calculate position
+                    const canvasPosition = chart.canvas.getBoundingClientRect();
+                    const chartArea = chart.chartArea;
+                    const xScale = chart.scales.x;
+                    const yScale = chart.scales.y;
+                    
+                    const xPixel = xScale.getPixelForValue(point.x);
+                    const yPixel = yScale.getPixelForValue(point.y);
+                    
+                    // Position delete overlay near the point
+                    deleteOverlay.style.display = 'block';
+                    deleteOverlay.style.left = (xPixel + 15) + 'px';
+                    deleteOverlay.style.top = (yPixel - 35) + 'px';
+                    
+                    // Store which point is being hovered
+                    hoveredPointIndex = {
+                        datasetIndex: datasetIndex,
+                        pointIndex: pointIndex,
+                        point: point
+                    };
+                } else {
+                    deleteOverlay.style.display = 'none';
+                    hoveredPointIndex = null;
+                }
+            } else {
+                deleteOverlay.style.display = 'none';
+                hoveredPointIndex = null;
+            }
+        }
+
+        // Handle delete overlay click
+        document.getElementById('deleteOverlay').addEventListener('click', async function() {
+            if (hoveredPointIndex !== null && deleteEnabled) {
+                await deleteDataPoint(hoveredPointIndex);
+            }
+        });
+
+        async function deleteDataPoint(pointInfo) {
+            if (!deleteEnabled) {
+                showNotification('Delete action is currently disabled', 'error');
+                return;
+            }
+
+            try {
+                // Combine all data points
+                const allData = [...currentData.actual, ...currentData.newPoints];
+                
+                if (allData.length === 0) {
+                    showNotification('No data points to delete', 'error');
+                    return;
+                }
+
+                // Calculate actual index in combined array
+                let actualIndex;
+                if (pointInfo.datasetIndex === 0) {
+                    actualIndex = pointInfo.pointIndex;
+                } else {
+                    actualIndex = currentData.actual.length + pointInfo.pointIndex;
+                }
+
+                // Save state for undo
+                undoStack.push({
+                    data: JSON.parse(JSON.stringify(allData)),
+                    deleted: allData[actualIndex],
+                    index: actualIndex
+                });
+
+                // Send delete request to server
+                const response = await fetch(`/api/data/${actualIndex}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data: allData
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete data point');
+                }
+
+                const result = await response.json();
+
+                // Update current data
+                currentData.actual = result.actual || [];
+                currentData.regression = result.regression || [];
+                currentData.newPoints = [];
+
+                // Update UI
+                updateUI(result);
+                updateNewPointsList();
+                createChart();
+
+                // Hide delete overlay
+                document.getElementById('deleteOverlay').style.display = 'none';
+                hoveredPointIndex = null;
+
+                // Show success notification with undo option
+                showNotification(
+                    `Data point deleted successfully (Day ${result.deleted.x}: ${result.deleted.y}°C)`,
+                    'success',
+                    { showUndo: true }
+                );
+
+            } catch (error) {
+                console.error('Error deleting data point:', error);
+                showNotification('Unable to delete data point, please try again later', 'error');
+            }
+        }
+
+        async function undoDelete() {
+            if (undoStack.length === 0) {
+                showNotification('Nothing to undo', 'error');
+                return;
+            }
+
+            try {
+                const lastState = undoStack.pop();
+                
+                // Restore the data by recalculating with the original data
+                const response = await fetch('/api/recalculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data: lastState.data
+                    })
+                });
+
+                const result = await response.json();
+
+                // Update current data
+                currentData.actual = result.actual;
+                currentData.regression = result.regression;
+                currentData.newPoints = [];
+
+                // Update UI
+                updateUI(result);
+                updateNewPointsList();
+                createChart();
+
+                // Remove all notifications
+                document.querySelectorAll('.notification').forEach(n => n.remove());
+
+                showNotification(
+                    `Data point restored (Day ${lastState.deleted.x}: ${lastState.deleted.y}°C)`,
+                    'info'
+                );
+
+            } catch (error) {
+                console.error('Error undoing delete:', error);
+                showNotification('Unable to undo, please try again', 'error');
+            }
         }
 
         function addDataPoint() {
