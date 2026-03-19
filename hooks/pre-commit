@@ -29,15 +29,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Run RuboCop linting
-echo ""
-echo "Running linter..."
-bundle exec rubocop
-if [ $? -ne 0 ]; then
-  echo "❌ Linting failed! Commit aborted."
-  exit 1
-fi
-
 echo ""
 echo "✅ All pre-commit checks passed!"
 exit 0

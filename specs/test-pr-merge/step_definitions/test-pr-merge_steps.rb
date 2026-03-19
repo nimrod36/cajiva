@@ -1,8 +1,8 @@
 # frozen_string_literal: true
-# rubocop:disable Naming/FileName
 
 # Step definitions for test pr merge
 # This feature validates that PR merges are blocked when specs fail or are incomplete
+# Note: File name matches feature file pattern (test-pr-merge.feature)
 
 # Background steps
 Given('a repository with branch protection rules configured') do
