@@ -1,0 +1,117 @@
+#!/bin/bash
+# Pre-commit hook v0: Display test results and coverage without enforcement
+# This version provides feedback only and never blocks commits
+
+echo "============================================================"
+echo "PRE-COMMIT HOOK - FEEDBACK MODE (v0)"
+echo "============================================================"
+echo ""
+echo "ℹ️  This hook provides information only and will not block your commit"
+echo ""
+
+# Check if hooks should be skipped
+if [ "$SKIP_HOOKS" = "1" ] || [ "$NO_VERIFY" = "1" ]; then
+  echo "⚠️  Skipping pre-commit checks (SKIP_HOOKS=1)"
+  exit 0
+fi
+
+# Function to handle errors gracefully
+handle_error() {
+  local error_message="$1"
+  echo "⚠️  $error_message"
+  echo "ℹ️  This is informational only - proceeding anyway"
+  exit 0
+}
+
+# Check if bundle is available
+if ! command -v bundle &> /dev/null; then
+  handle_error "Bundle command not found. Please install bundler."
+fi
+
+# Check if test framework exists
+if [ ! -f "Gemfile" ]; then
+  handle_error "No Gemfile found. No test framework detected."
+fi
+
+echo "📋 Test Results:"
+echo "------------------------------------------------------------"
+
+# Run RSpec tests
+if bundle exec rspec --version &> /dev/null; then
+  echo "Running RSpec tests..."
+  RSPEC_OUTPUT=$(bundle exec rspec --format progress 2>&1)
+  RSPEC_EXIT_CODE=$?
+  
+  if [ $RSPEC_EXIT_CODE -eq 0 ]; then
+    echo "✓ RSpec tests passed"
+    RSPEC_SUMMARY=$(echo "$RSPEC_OUTPUT" | grep -E "examples?, [0-9]+ failures?" | tail -1)
+    echo "  $RSPEC_SUMMARY"
+  else
+    echo "✗ RSpec tests failed"
+    RSPEC_SUMMARY=$(echo "$RSPEC_OUTPUT" | grep -E "examples?, [0-9]+ failures?" | tail -1)
+    echo "  $RSPEC_SUMMARY"
+    echo ""
+    echo "  Failed examples:"
+    echo "$RSPEC_OUTPUT" | grep -A 2 "Failures:" | tail -n +2 | head -5
+  fi
+else
+  echo "⚠️  RSpec not available"
+fi
+
+echo ""
+
+# Run Cucumber tests
+if bundle exec cucumber --version &> /dev/null; then
+  echo "Running Cucumber tests..."
+  CUCUMBER_OUTPUT=$(bundle exec cucumber specs/ --format progress --strict-undefined 2>&1)
+  CUCUMBER_EXIT_CODE=$?
+  
+  if [ $CUCUMBER_EXIT_CODE -eq 0 ]; then
+    echo "✓ Cucumber tests passed"
+    CUCUMBER_SUMMARY=$(echo "$CUCUMBER_OUTPUT" | grep -E "[0-9]+ scenarios?" | tail -1)
+    echo "  $CUCUMBER_SUMMARY"
+  else
+    echo "✗ Cucumber tests failed"
+    CUCUMBER_SUMMARY=$(echo "$CUCUMBER_OUTPUT" | grep -E "[0-9]+ scenarios?" | tail -1)
+    echo "  $CUCUMBER_SUMMARY"
+  fi
+else
+  echo "⚠️  Cucumber not available"
+fi
+
+echo ""
+echo "📊 Test Coverage:"
+echo "------------------------------------------------------------"
+
+# Run coverage analysis
+if bundle exec rspec --format documentation > /dev/null 2>&1; then
+  # Check SimpleCov coverage (if available)
+  if [ -f "coverage/.last_run.json" ]; then
+    COVERAGE=$(ruby -rjson -e 'puts JSON.parse(File.read("coverage/.last_run.json"))["result"]["line"]' 2>/dev/null)
+    if [ ! -z "$COVERAGE" ]; then
+      COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
+      echo "✓ Line coverage: ${COVERAGE}%"
+      
+      if [ "$COVERAGE_INT" -lt 80 ]; then
+        echo "⚠️  Coverage is below recommended 80% threshold"
+        echo "   Consider adding more tests to improve coverage"
+      fi
+    else
+      echo "⚠️  Coverage data not available"
+    fi
+  else
+    echo "⚠️  Coverage report not found"
+    echo "   Add SimpleCov to your test suite for coverage reporting"
+  fi
+else
+  echo "⚠️  Unable to run coverage analysis"
+fi
+
+echo ""
+echo "============================================================"
+echo "ℹ️  This is informational only - proceeding anyway"
+echo "============================================================"
+echo ""
+
+# Always exit with success in v0
+exit 0

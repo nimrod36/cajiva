@@ -1,0 +1,168 @@
+#!/bin/bash
+# Pre-push hook v0: Display test results and coverage without enforcement
+# This version provides feedback only and never blocks pushes
+
+echo "============================================================"
+echo "PRE-PUSH HOOK - FEEDBACK MODE (v0)"
+echo "============================================================"
+echo ""
+echo "ℹ️  This hook provides information only and will not block your push"
+echo ""
+
+# Check if hooks should be skipped
+if [ "$SKIP_HOOKS" = "1" ] || [ "$NO_VERIFY" = "1" ]; then
+  echo "⚠️  Skipping pre-push checks (SKIP_HOOKS=1)"
+  exit 0
+fi
+
+# Function to handle errors gracefully
+handle_error() {
+  local error_message="$1"
+  echo "⚠️  $error_message"
+  echo "ℹ️  This is informational only - proceeding anyway"
+  exit 0
+}
+
+# Check if bundle is available
+if ! command -v bundle &> /dev/null; then
+  handle_error "Bundle command not found. Please install bundler."
+fi
+
+# Check if test framework exists
+if [ ! -f "Gemfile" ]; then
+  handle_error "No Gemfile found. No test framework detected."
+fi
+
+echo "📋 Test Results:"
+echo "------------------------------------------------------------"
+
+# Run full RSpec test suite
+if bundle exec rspec --version &> /dev/null; then
+  echo "Running full RSpec test suite..."
+  RSPEC_START=$(date +%s)
+  RSPEC_OUTPUT=$(bundle exec rspec --format progress 2>&1)
+  RSPEC_EXIT_CODE=$?
+  RSPEC_END=$(date +%s)
+  RSPEC_DURATION=$((RSPEC_END - RSPEC_START))
+  
+  if [ $RSPEC_EXIT_CODE -eq 0 ]; then
+    echo "✓ RSpec tests passed"
+    RSPEC_SUMMARY=$(echo "$RSPEC_OUTPUT" | grep -E "examples?, [0-9]+ failures?" | tail -1)
+    echo "  $RSPEC_SUMMARY"
+    echo "  Duration: ${RSPEC_DURATION}s"
+  else
+    echo "✗ RSpec tests failed"
+    RSPEC_SUMMARY=$(echo "$RSPEC_OUTPUT" | grep -E "examples?, [0-9]+ failures?" | tail -1)
+    echo "  $RSPEC_SUMMARY"
+    echo "  Duration: ${RSPEC_DURATION}s"
+    echo ""
+    echo "  Failed examples:"
+    echo "$RSPEC_OUTPUT" | grep -A 2 "Failures:" | tail -n +2 | head -10
+  fi
+  
+  # Warn about long-running tests
+  if [ $RSPEC_DURATION -gt 60 ]; then
+    echo "⚠️  Tests are taking longer than expected (${RSPEC_DURATION}s)"
+    echo "   Consider optimizing test performance"
+  fi
+else
+  echo "⚠️  RSpec not available"
+fi
+
+echo ""
+
+# Run full Cucumber test suite
+if bundle exec cucumber --version &> /dev/null; then
+  echo "Running full Cucumber test suite..."
+  CUCUMBER_START=$(date +%s)
+  CUCUMBER_OUTPUT=$(bundle exec cucumber specs/ --format progress --strict-undefined 2>&1)
+  CUCUMBER_EXIT_CODE=$?
+  CUCUMBER_END=$(date +%s)
+  CUCUMBER_DURATION=$((CUCUMBER_END - CUCUMBER_START))
+  
+  if [ $CUCUMBER_EXIT_CODE -eq 0 ]; then
+    echo "✓ Cucumber tests passed"
+    CUCUMBER_SUMMARY=$(echo "$CUCUMBER_OUTPUT" | grep -E "[0-9]+ scenarios?" | tail -1)
+    echo "  $CUCUMBER_SUMMARY"
+    echo "  Duration: ${CUCUMBER_DURATION}s"
+  else
+    echo "✗ Cucumber tests failed"
+    CUCUMBER_SUMMARY=$(echo "$CUCUMBER_OUTPUT" | grep -E "[0-9]+ scenarios?" | tail -1)
+    echo "  $CUCUMBER_SUMMARY"
+    echo "  Duration: ${CUCUMBER_DURATION}s"
+    
+    # Show undefined steps if any
+    if echo "$CUCUMBER_OUTPUT" | grep -q "undefined"; then
+      UNDEFINED_COUNT=$(echo "$CUCUMBER_OUTPUT" | grep -o "[0-9]* undefined" | awk '{print $1}')
+      echo "  ⚠️  $UNDEFINED_COUNT undefined step(s) found"
+    fi
+  fi
+  
+  # Warn about long-running tests
+  if [ $CUCUMBER_DURATION -gt 60 ]; then
+    echo "⚠️  Tests are taking longer than expected (${CUCUMBER_DURATION}s)"
+    echo "   Consider optimizing test performance"
+  fi
+else
+  echo "⚠️  Cucumber not available"
+fi
+
+echo ""
+echo "📊 Test Coverage:"
+echo "------------------------------------------------------------"
+
+# Run comprehensive coverage analysis
+if bundle exec rspec --format documentation > /dev/null 2>&1; then
+  # Check SimpleCov coverage (if available)
+  if [ -f "coverage/.last_run.json" ]; then
+    COVERAGE=$(ruby -rjson -e 'puts JSON.parse(File.read("coverage/.last_run.json"))["result"]["line"]' 2>/dev/null)
+    BRANCH_COVERAGE=$(ruby -rjson -e 'puts JSON.parse(File.read("coverage/.last_run.json"))["result"]["branch"]' 2>/dev/null)
+    
+    if [ ! -z "$COVERAGE" ]; then
+      COVERAGE_INT=$(echo "$COVERAGE" | cut -d. -f1)
+      echo "✓ Line coverage: ${COVERAGE}%"
+      
+      if [ ! -z "$BRANCH_COVERAGE" ]; then
+        echo "✓ Branch coverage: ${BRANCH_COVERAGE}%"
+      fi
+      
+      if [ "$COVERAGE_INT" -lt 80 ]; then
+        echo ""
+        echo "⚠️  Coverage is below recommended 80% threshold"
+        echo "   Current: ${COVERAGE}%"
+        echo "   Target: 80%"
+        echo "   Gap: $((80 - COVERAGE_INT))%"
+        echo "   Consider adding more tests before pushing"
+      fi
+      
+      # Check for coverage trends if previous coverage exists
+      if [ -f "coverage/.last_run.json.backup" ]; then
+        PREV_COVERAGE=$(ruby -rjson -e 'puts JSON.parse(File.read("coverage/.last_run.json.backup"))["result"]["line"]' 2>/dev/null)
+        if [ ! -z "$PREV_COVERAGE" ]; then
+          COVERAGE_CHANGE=$(echo "$COVERAGE - $PREV_COVERAGE" | bc)
+          if (( $(echo "$COVERAGE_CHANGE > 0" | bc -l) )); then
+            echo "✓ Coverage improved by ${COVERAGE_CHANGE}%"
+          elif (( $(echo "$COVERAGE_CHANGE < 0" | bc -l) )); then
+            echo "⚠️  Coverage decreased by ${COVERAGE_CHANGE}%"
+          fi
+        fi
+      fi
+    else
+      echo "⚠️  Coverage data not available"
+    fi
+  else
+    echo "⚠️  Coverage report not found"
+    echo "   Add SimpleCov to your test suite for coverage reporting"
+  fi
+else
+  echo "⚠️  Unable to run coverage analysis"
+fi
+
+echo ""
+echo "============================================================"
+echo "ℹ️  This is informational only - proceeding anyway"
+echo "============================================================"
+echo ""
+
+# Always exit with success in v0
+exit 0
