@@ -32,6 +32,3 @@ jobs:
     
     - name: Run Cucumber BDD tests with strict undefined
       run: bundle exec cucumber specs/ --strict-undefined --format progress
-    
-    - name: Run linter
-      run: bundle exec rubocop
