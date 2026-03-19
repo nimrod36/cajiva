@@ -113,7 +113,15 @@ When('the user attempts to merge the pull request') do
   end
 end
 
-# Assertion steps - removed duplicates that exist in merge_pr_only_if_all_tests_steps_are_implemented_a_steps.rb
+# Assertion steps
+Then('the pull request is successfully merged') do
+  expect(@merge_allowed).to be true
+end
+
+Then('the merge is blocked') do
+  expect(@merge_allowed).to be false
+end
+
 Then('the branch is updated with the changes') do
   expect(@pull_request[:status]).to eq('open').or eq('merged')
   expect(@merge_attempt).to be true
