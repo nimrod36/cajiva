@@ -1,1 +1,3 @@
 default: --require specs --publish-quiet --format pretty specs
+ci: --require specs --strict-undefined --format pretty --format json --out reports/cucumber_report.json specs
+pr_check: --require specs --strict-undefined --format json --out reports/cucumber_report.json --format progress specs
