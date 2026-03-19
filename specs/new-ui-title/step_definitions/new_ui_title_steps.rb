@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Step definitions for new UI title
 # Generated from issue #37
 

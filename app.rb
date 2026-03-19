@@ -114,6 +114,7 @@ post '/api/recalculate' do
 end
 
 # API endpoint to delete a data point
+# rubocop:disable Metrics/BlockLength
 delete '/api/data/:index' do
   content_type :json
 
@@ -124,7 +125,7 @@ delete '/api/data/:index' do
     body_params = JSON.parse(request.body.read)
     data_points = body_params['data']
 
-    if index < 0 || index >= data_points.length
+    if index.negative? || index >= data_points.length
       status 400
       return { error: 'Invalid index' }.to_json
     end
@@ -172,6 +173,7 @@ delete '/api/data/:index' do
     { error: e.message }.to_json
   end
 end
+# rubocop:enable Metrics/BlockLength
 
 get '/' do
   send_file File.join(settings.public_folder, 'index.html')
