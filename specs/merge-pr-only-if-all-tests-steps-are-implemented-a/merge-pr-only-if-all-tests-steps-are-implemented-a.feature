@@ -51,7 +51,7 @@ Feature: Enforce full test coverage and passing tests before merging a pull requ
     Given <condition>  
     When a developer attempts to merge the pull request  
     Then the merge is blocked  
-    And the reason displayed is <reason>  
+    And the reason displayed is "<reason>"  
 
     Examples:  
       | condition                                      | reason                                      |  
