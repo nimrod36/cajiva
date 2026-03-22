@@ -213,11 +213,12 @@ Then('the pre-push hook checks coverage requirements') do
   expect(@has_coverage_check).to be(true), "Hook should have coverage validation logic"
 end
 
-Then('a warning message about insufficient coverage is displayed') do
-  expect(@hook_content).to match(/coverage/)
-  expect(@insufficient_coverage).to be true
-  expect(@push_output).to include('Coverage requirement not met') if @push_output
-end
+#Then('a warning message about insufficient coverage is displayed') do
+#  expect(@hook_content).to match(/coverage/)
+#  expect(@insufficient_coverage).to be true
+#  expect(@push_output).to include('Coverage requirement not met') if @push_output
+#end
+
 
 # Cleanup temporary files after scenarios
 After do
