@@ -12,6 +12,15 @@ Given('the cajiva repository has git hooks installed') do
   @repo_root = File.expand_path('../../..', __dir__)
   @hooks_dir = File.join(@repo_root, '.git', 'hooks')
   
+  # Install hooks if they don't exist (needed for CI)
+  unless File.exist?(File.join(@hooks_dir, 'pre-commit')) && File.exist?(File.join(@hooks_dir, 'pre-push'))
+    source_hooks = File.join(@repo_root, 'hooks')
+    FileUtils.cp(File.join(source_hooks, 'pre-commit'), @hooks_dir) if File.exist?(File.join(source_hooks, 'pre-commit'))
+    FileUtils.cp(File.join(source_hooks, 'pre-push'), @hooks_dir) if File.exist?(File.join(source_hooks, 'pre-push'))
+    FileUtils.chmod(0755, File.join(@hooks_dir, 'pre-commit')) if File.exist?(File.join(@hooks_dir, 'pre-commit'))
+    FileUtils.chmod(0755, File.join(@hooks_dir, 'pre-push')) if File.exist?(File.join(@hooks_dir, 'pre-push'))
+  end
+  
   expect(File.directory?(@hooks_dir)).to be true
   expect(File.exist?(File.join(@hooks_dir, 'pre-commit'))).to be true
   expect(File.exist?(File.join(@hooks_dir, 'pre-push'))).to be true

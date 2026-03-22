@@ -1,7 +1,7 @@
 Feature: Enforce branch protection through git hooks and CI
   As a developer
   I want git hooks to prevent commits and pushes when tests fail
-  So that only tested and reliable code reaches the main branch
+  So that only tested and reliable code reaches the main branch and protect it
 
   Background:
     Given the cajiva repository has git hooks installed
