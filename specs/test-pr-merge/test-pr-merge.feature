@@ -1,62 +1,61 @@
-Feature: Restrict pull request merge on spec failure  
-  As a developer  
-  I want to prevent pull requests from being merged if any spec fails  
-  So that only valid and reliable code is merged into the main branch  
+Feature: Enforce branch protection through git hooks and CI
+  As a developer
+  I want git hooks to prevent commits and pushes when tests fail
+  So that only tested and reliable code reaches the main branch
 
-  Background:  
-    Given a repository with branch protection rules configured  
-    And a pull request exists with changes ready for review  
+  Background:
+    Given the cajiva repository has git hooks installed
+    And all existing tests are passing
 
-  Scenario: Successfully merge pull request when all specs pass  
-    Given all specs are executed for the pull request  
-    And all specs pass without errors  
-    When the user attempts to merge the pull request  
-    Then the pull request is successfully merged  
-    And the branch is updated with the changes  
+Scenario: Git hooks allow push when all tests pass
+    Given all RSpec tests pass
+    And all Cucumber scenarios pass
+    When I attempt to push changes to the repository
+    Then the pre-push hook allows the push
+    And no test failures are reported
 
-  Scenario: Prevent merging pull request when a spec fails  
-    Given all specs are executed for the pull request  
-    And at least one spec fails  
-    When the user attempts to merge the pull request  
-    Then the merge is blocked  
-    And a message is displayed indicating that one or more specs failed  
+Scenario: Pre-commit hook blocks commit when RSpec tests fail
+    Given an RSpec test has been modified to fail
+    When I attempt to commit the changes
+    Then the pre-commit hook blocks the commit
+    And an error message indicates RSpec tests failed
 
-  Scenario: Prevent merging pull request when spec execution is incomplete  
-    Given spec execution is triggered for the pull request  
-    And spec execution is still in progress  
-    When the user attempts to merge the pull request  
-    Then the merge is blocked  
-    And a message is displayed indicating that spec execution is not yet complete  
+Scenario: Pre-commit hook blocks commit when Cucumber scenarios fail
+    Given a Cucumber step definition has been modified to fail
+    When I attempt to commit the changes
+    Then the pre-commit hook blocks the commit
+    And an error message indicates Cucumber tests failed
 
-  Scenario: Notify user when no specs are configured  
-    Given the pull request does not have any specs configured  
-    When the user attempts to merge the pull request  
-    Then the merge is blocked  
-    And a message is displayed indicating that no specs are configured for the repository  
+Scenario: Verify all feature files have corresponding scenarios
+    Given all feature files in the specs directory
+    When I check for scenario coverage
+    Then every feature file must have at least one scenario
+    And every scenario must have step definitions
 
-  Scenario Outline: Prevent merging pull request with failing spec and display failure details  
-    Given all specs are executed for the pull request  
-    And the spec "<spec_name>" fails with error "<error_message>"  
-    When the user attempts to merge the pull request  
-    Then the merge is blocked  
-    And a message is displayed indicating the failure in "<spec_name>" with the error "<error_message>"  
+Scenario: Git hooks are installed and executable
+    Given the repository root directory
+    When I check the git hooks directory
+    Then the pre-commit hook must exist
+    And the pre-push hook must exist
+    And both hooks must be executable
+    And both hooks must contain test execution commands
 
-    Examples:  
-      | spec_name       | error_message                 |  
-      | Authentication  | Invalid token response       |  
-      | DataValidation  | Missing required field: email|  
+Scenario: Hooks can be bypassed with SKIP_HOOKS flag
+    Given an RSpec test has been modified to fail
+    And the SKIP_HOOKS environment variable is set to "1"
+    When I attempt to commit the changes
+    Then the commit is allowed despite test failures
+    And a warning message about skipping hooks is displayed
 
-  Scenario: Merge pull request when branch protection rules are disabled  
-    Given branch protection rules are disabled for the repository  
-    And all specs are executed for the pull request  
-    And at least one spec fails  
-    When the user attempts to merge the pull request  
-    Then the pull request is successfully merged  
-    And the branch is updated with the changes  
+  Scenario: Pre-push hook runs full test suite
+    Given all tests are currently passing
+    When I trigger the pre-push hook directly
+    Then both RSpec and Cucumber test suites are executed
+    And test coverage analysis is performed
+    And the hook exits with success status
 
-  Scenario: Prevent merging pull request due to network issues during spec execution  
-    Given spec execution is triggered for the pull request  
-    And the spec execution fails due to a network issue  
-    When the user attempts to merge the pull request  
-    Then the merge is blocked  
-    And a message is displayed indicating that spec execution could not be completed due to network issues
+  Scenario: Pre-push hook validates test coverage threshold
+    Given all tests pass but coverage is below threshold
+    When I attempt to push changes to the repository
+    Then the pre-push hook checks coverage requirements
+    And a warning message about insufficient coverage is displayed
