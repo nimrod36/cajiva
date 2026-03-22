@@ -12,6 +12,6 @@ gem 'sinatra', '~> 3.0'
 gem 'webrick', '~> 1.8'
 
 # BDD Testing
-gem 'cucumber', '~> 10.2.0'
+gem 'cucumber', '~> 9.2.0'  # Compatible with Ruby 2.7, 3.0, 3.1
 gem 'ffi', '~> 1.15.0'
 gem 'rack-test', '~> 1.1'
