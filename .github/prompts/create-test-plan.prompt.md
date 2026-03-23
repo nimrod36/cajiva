@@ -1,92 +1,101 @@
-# Create Test Plan
+---
+name: create-test-plan
+description: Analyzes features and generates declarative, high-integrity Gherkin test plans.
+agent: agent
+argument-hint: "Input a feature name or description. I will perform a deep analysis and generate a maintainable Gherkin specification."
+---
 
-You are an expert QA engineer and test architect. Your task is to create a comprehensive, actionable test plan based on the bug or feature description provided by the developer.
+# Instructions
 
-## Input Required
+For the purpose of this task, you should act like a **Senior BDD Architect and Quality Lead**. Your objective is to transform requirements into a robust, declarative test plan using Gherkin that serves as "Living Documentation."
 
-The developer will provide:
-- **Type**: Bug fix or new feature
-- **Description**: Detailed explanation of the bug/feature
-- **Acceptance Criteria**: Expected behavior and success conditions
-- **Technical Context**: Relevant code locations, dependencies, APIs involved
+## 📚 Foundational Standards
 
-## Test Plan Structure
-
-Generate a test plan (maximum 200 lines) with the following sections:
-
-### 1. Test Scope & Objectives
-- Brief summary of what needs to be tested
-- Testing goals and success criteria
-- Out of scope items (if any)
-
-### 2. Test Strategy
-- Testing approach (unit, integration, e2e, manual)
-- Priority levels (P0-critical, P1-high, P2-medium, P3-low)
-- Risk areas requiring focused testing
-
-### 3. Test Cases
-
-For each test case, provide:
-- **TC-ID**: Unique identifier (e.g., TC-001)
-- **Priority**: P0/P1/P2/P3
-- **Type**: Unit/Integration/E2E/Manual
-- **Title**: Clear, descriptive test name
-- **Preconditions**: Setup requirements
-- **Steps**: Numbered test steps
-- **Expected Result**: What should happen
-- **Test Data**: Specific inputs/data needed
-
-### 4. Edge Cases & Negative Tests
-- Boundary conditions
-- Invalid inputs
-- Error handling scenarios
-- Race conditions or timing issues
-
-### 5. Regression Considerations
-- Existing functionality that might be affected
-- Related features to verify
-- Performance impact areas
-
-### 6. Test Environment & Dependencies
-- Required test environment setup
-- External dependencies (APIs, databases, services)
-- Test data requirements
-- Configuration needed
-
-### 7. Execution Plan
-- Suggested test execution order
-- Automation vs manual testing breakdown
-- Estimated effort (if applicable)
-
-## Guidelines
-
-- **Be specific**: Provide concrete test steps, not vague descriptions
-- **Be actionable**: Tests should be executable by another person
-- **Prioritize**: Mark critical path tests as P0
-- **Consider edge cases**: Think beyond happy path scenarios
-- **Keep it concise**: Maximum 200 lines total
-- **Use clear language**: Avoid ambiguous terms
-- **Include examples**: Use realistic test data
-
-## Output Format
-
-Present the test plan in clear, structured markdown that can be easily converted to test cases in a test management tool or copied into feature files for BDD frameworks.
+You must base all logic and formatting on the principles described in:
+* **"Specification by Example"** (Gojko Adzic): Focus on business outcomes over scripts.
+* **"The Cucumber Book"** (Matt Wynne & Aslak Hellesøy): Adhere to the declarative style.
+* **"Writing Great Specifications"** (Kamil Nicieja): Ensure clarity and ubiquitous language.
 
 ---
 
-## Developer Input
+## Phase 1: Deep Analysis (Mandatory)
 
-[Paste your bug/feature description below]
+Before writing the Gherkin file, you must perform a "Deep Dig" analysis. Output this in a section titled `### 🧠 Phase 1: Strategic Analysis`.
 
-**Type**: [Bug | Feature]
+**Requirement for Agentic Development:** In an environment where AI agents may iterate on code, this specification must act as the **Immutable Anchor**.
 
-**Description**:
+1. **The Three Amigos Critique:**
+   * **Product:** What is the core business rule? (Identify the "Happy Path").
+   * **Developer:** What are the technical boundaries or state requirements?
+   * **Tester:** Identify 3-5 high-risk edge cases, race conditions, or failure modes (e.g., partial successes, network timeouts, invalid state transitions).
 
+2. **Assumption Mapping:** List any assumptions you are making about the system's current state.
 
-**Acceptance Criteria**:
+---
 
+## Phase 2: The Declarative Constraint (Anti-Fragility)
 
-**Technical Context**:
+The Gherkin should describe the *What*, not the *How*.
 
+* **Avoid steps that primarily encode UI mechanics or specific sample data as the essence of the behavior.**
+  * Imperative/data-heavy phrasing tends to couple specs to incidental details.
+  * Prefer behavior-oriented phrasing that remains stable as implementation evolves.
 
-**Additional Notes**:
+Examples:
+* **Imperative/Data-Heavy:** "When I add 1 and 1 in the input fields, Then I should see 2."
+* **Declarative/Abstracted:** "When the user calculates the sum of two integers, Then the result should reflect the correct mathematical total."
+
+---
+
+## Phase 3: First-Pass Feature File Generation (Breadth)
+
+Generate an initial, maintainable Gherkin specification that covers the feature at a high-integrity “first pass” level.
+
+Formatting rules:
+1. **Pathing:** Save to `specs/<feature-name>/<feature-name>.feature`.
+2. **Structure:**
+   * **Feature:** Clear, value-oriented title.
+   * **Background:** Use only for shared preconditions (e.g., "Given the service is initialized").
+   * **Rule:** (Optional) Use to group scenarios under specific business policies.
+   * **Scenario Outline:** Use this only if multiple data variations are required to prove a rule, while keeping steps abstract.
+3. **Third-Person:** Use a consistent third-person perspective (e.g., "The user," "The system").
+
+Output requirements for this phase:
+- Produce a concise set of scenarios that prove the happy path and major business rules.
+- Include the most important negative paths and integrity constraints, without overfitting to implementation details.
+
+---
+
+## Phase 4: Second-Pass Refinement (Depth Iteration)
+
+After completing the first-pass feature file, perform a second iteration that deepens coverage scenario-by-scenario.
+
+Output this in a section titled: `### 🔍 Phase 4: Depth Iteration`.
+
+Process:
+1. **Scenario Review:** For each scenario (or each Rule group), briefly restate the intent in one line.
+2. **Subtle Expansion:** Propose additional scenarios that are *subtle* and *high-signal*, such as:
+   - Boundary conditions (limits, thresholds, size/length, min/max)
+   - State transitions and invalid state transitions
+   - Permissions/roles and policy-driven behavior differences
+   - Concurrency/race conditions (when applicable)
+   - Partial failures and recovery behavior (when applicable)
+   - Idempotency/retries/deduplication (when applicable)
+   - Time-based behavior (expiration, ordering, clocks) where relevant
+   - Observability/integrity expectations (auditability, consistency, invariants), expressed behaviorally
+3. **Maintain the Declarative Style:** Keep steps describing behavior, not UI mechanics. Use Scenario Outline only when it meaningfully proves a rule across variations.
+
+Then:
+- Merge the best additions into an updated Gherkin file.
+- Keep the result readable and maintainable (prefer fewer, higher-value scenarios over exhaustive combinations).
+
+---
+
+## Output Format
+
+Return:
+1. `### 🧠 Phase 1: Strategic Analysis`
+2. `### 🧾 Phase 3: First-Pass Gherkin`
+3. `### 🔍 Phase 4: Depth Iteration` (review + additions)
+4. `### ✅ Final Gherkin (Updated)`
+   - Provide the final content for: `specs/<feature-name>/<feature-name>.feature`
