@@ -199,8 +199,6 @@ jobs:
                 '**Feature File:** `' + featureFilePath + '`\n' +
                 '**Step Definitions:** `' + stepDefsFile + '`\n\n' +
                 '### AI-Generated Content\n\n' +
-                generatedContent + '\n\n' +
-                '---\n\n' +
                 '### Next Steps\n' +
                 '1. Review the scenarios in [`' + featureFilePath + '`](../blob/' + branchName + '/' + featureFilePath + ')\n' +
                 '2. Implement step definitions in [`' + stepDefsFile + '`](../blob/' + branchName + '/' + stepDefsFile + ')\n' +

@@ -48,6 +48,265 @@ require 'rspec/expectations'
 
 Given('a dataset with valid numeric values') do
   # TODO: Set up test data
+end
+
+When('the system validates the data') do
+  # TODO: Perform validation action
+  pending 'Not yet implemented'
+end
+
+Then('the validation should succeed') do
+  # TODO: Assert expected outcome
+  expect(@result).to be_truthy
+end
+```
+
+**Key Principles:**
+- Include `# frozen_string_literal: true` header
+- Use RSpec expectations (`expect(...).to`)
+- Prefer instance variables (`@dataset`) for sharing state
+- Add `pending 'Not yet implemented'` for incomplete steps
+- File path: `specs/<feature-name>/step_definitions/<feature-name>_steps.rb`
+
+---
+
+#### TypeScript (Cucumber-js with Jest/Chai)
+```typescript
+import { Given, When, Then } from '@cucumber/cucumber';
+import { expect } from 'chai'; // or '@jest/globals'
+
+/**
+ * Step definitions for <feature-name>
+ * <Brief description>
+ */
+
+let dataset: any;
+let validationResult: boolean;
+
+Given('a dataset with valid numeric values', function () {
+  // TODO: Set up test data
+  dataset = { /* ... */ };
+});
+
+When('the system validates the data', function () {
+  // TODO: Perform validation
+  // validationResult = validateData(dataset);
+  throw new Error('Step not yet implemented');
+});
+
+Then('the validation should succeed', function () {
+  expect(validationResult).to.be.true;
+});
+```
+
+**Key Principles:**
+- Use ES6 imports (`import { Given, When, Then }`)
+- Leverage TypeScript types for clarity
+- Use `this` context or module-scoped variables for state
+- File path: `features/step_definitions/<feature-name>.steps.ts`
+
+---
+
+#### Java (Cucumber-JVM with JUnit 5)
+```java
+package com.example.stepdefs;
+
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.When;
+import io.cucumber.java.en.Then;
+import static org.junit.jupiter.api.Assertions.*;
+
+public class DataValidationSteps {
+    private Object dataset;
+    private boolean validationResult;
+
+    @Given("a dataset with valid numeric values")
+    public void a_dataset_with_valid_numeric_values() {
+        // TODO: Set up test data
+        throw new io.cucumber.java.PendingException("Not yet implemented");
+    }
+
+    @When("the system validates the data")
+    public void the_system_validates_the_data() {
+        // TODO: Perform validation
+        throw new io.cucumber.java.PendingException("Not yet implemented");
+    }
+
+    @Then("the validation should succeed")
+    public void the_validation_should_succeed() {
+        assertTrue(validationResult, "Validation should have succeeded");
+    }
+}
+```
+
+**Key Principles:**
+- Use annotations (`@Given`, `@When`, `@Then`)
+- Follow Java naming conventions (camelCase methods, PascalCase classes)
+- Store state in instance variables
+- File path: `src/test/java/com/example/stepdefs/DataValidationSteps.java`
+
+---
+
+#### Python (behave)
+```python
+from behave import given, when, then
+from hamcrest import assert_that, is_, equal_to
+
+@given('a dataset with valid numeric values')
+def step_impl(context):
+    """Set up test data"""
+    # TODO: Initialize test dataset
+    context.dataset = {}  # Placeholder
+    raise NotImplementedError('Step not yet implemented')
+
+@when('the system validates the data')
+def step_impl(context):
+    """Perform validation action"""
+    # TODO: Execute validation logic
+    raise NotImplementedError('Step not yet implemented')
+
+@then('the validation should succeed')
+def step_impl(context):
+    """Assert expected outcome"""
+    assert_that(context.validation_result, is_(True))
+```
+
+**Key Principles:**
+- Use decorators (`@given`, `@when`, `@then`)
+- Store state in `context` object
+- Follow PEP 8 naming (snake_case)
+- File path: `features/steps/<feature-name>_steps.py`
+
+---
+
+#### C# (SpecFlow)
+```csharp
+using TechTalk.SpecFlow;
+using Xunit;
+
+namespace MyProject.Specs.StepDefinitions
+{
+    [Binding]
+    public class DataValidationSteps
+    {
+        private readonly ScenarioContext _scenarioContext;
+        private object _dataset;
+        private bool _validationResult;
+
+        public DataValidationSteps(ScenarioContext scenarioContext)
+        {
+            _scenarioContext = scenarioContext;
+        }
+
+        [Given(@"a dataset with valid numeric values")]
+        public void GivenADatasetWithValidNumericValues()
+        {
+            // TODO: Set up test data
+            throw new PendingStepException("Not yet implemented");
+        }
+
+        [When(@"the system validates the data")]
+        public void WhenTheSystemValidatesTheData()
+        {
+            // TODO: Perform validation
+            throw new PendingStepException("Not yet implemented");
+        }
+
+        [Then(@"the validation should succeed")]
+        public void ThenTheValidationShouldSucceed()
+        {
+            Assert.True(_validationResult);
+        }
+    }
+}
+```
+
+**Key Principles:**
+- Use `[Binding]` class attribute
+- Inject `ScenarioContext` for cross-step state
+- Use regex patterns in attributes (`@"pattern"`)
+- File path: `Features/StepDefinitions/DataValidationSteps.cs`
+
+---
+
+#### Kotlin (Cucumber-JVM)
+```kotlin
+package com.example.stepdefs
+
+import io.cucumber.java8.En
+import org.junit.jupiter.api.Assertions.*
+
+class DataValidationSteps : En {
+    private var dataset: Any? = null
+    private var validationResult: Boolean = false
+
+    init {
+        Given("a dataset with valid numeric values") {
+            // TODO: Set up test data
+            throw io.cucumber.java.PendingException("Not yet implemented")
+        }
+
+        When("the system validates the data") {
+            // TODO: Perform validation
+            throw io.cucumber.java.PendingException("Not yet implemented")
+        }
+
+        Then("the validation should succeed") {
+            assertTrue(validationResult) { "Validation should have succeeded" }
+        }
+    }
+}
+```
+
+**Key Principles:**
+- Implement `En` interface for lambda-style steps
+- Use nullable types (`?`) appropriately
+- Store state in class properties
+- File path: `src/test/kotlin/com/example/stepdefs/DataValidationSteps.kt`
+
+---
+
+## Phase 4: Output Format
+
+Return the generated snippets in this structure:
+
+```markdown
+### 🎯 Detected Language: <Language>
+
+### 📝 Undefined Steps
+- Given a dataset with valid numeric values
+- When the system validates the data
+- Then the validation should succeed
+
+### ✅ Generated Step Definitions
+
+**File:** `<path-to-step-definition-file>`
+
+```<language>
+<Complete step definition code>
+```
+```
+
+---
+
+## Quality Checklist
+
+Before outputting, verify:
+1. ✅ **Language-specific idioms** (correct imports, naming conventions)
+2. ✅ **Assertion library** (RSpec, Jest, JUnit, PyHamcrest, xUnit)
+3. ✅ **State management** (instance variables, context, class properties)
+4. ✅ **Pending markers** (`pending`, `throw PendingException`, `NotImplementedError`)
+5. ✅ **File path conventions** match project structure
+6. ✅ **Declarative style** maintained (focus on behavior, not implementation details)
+
+---
+
+## Notes
+
+- **Fast Execution**: Steps should execute in <10 seconds (avoid heavy setup)
+- **Isolation**: Each scenario should be independent
+- **Reusability**: Prefer generic step patterns over hardcoded values (use Scenario Outline with Examples when appropriate)
+- **Maintainability**: Keep steps focused (one assertion per Then step when possible)
   # @dataset = [1.5, 2.3, 3.7]
   pending
 end
