@@ -77,7 +77,37 @@ jobs:
               }
               
               const data = await response.json();
-              const generatedContent = data.choices[0].message.content;
+              const featureAnalysis = data.choices[0].message.content;
+
+              console.log('✅ Step 1: Feature analysis complete');
+
+              // Step 2: Generate test plan using the feature analysis
+              const testPlanResponse = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${modelsToken}`
+                },
+                body: JSON.stringify({
+                  messages: [
+                    { role: 'system', content: createTestPlanPrompt },
+                    { role: 'user', content: featureAnalysis }
+                  ],
+                  model: 'gpt-4o',
+                  temperature: 0.7,
+                  max_tokens: 4000
+                })
+              });
+              
+              if (!testPlanResponse.ok) {
+                const errorText = await testPlanResponse.text();
+                throw new Error(`Test plan API call failed: ${testPlanResponse.status} ${testPlanResponse.statusText}\n${errorText}`);
+              }
+              
+              const testPlanData = await testPlanResponse.json();
+              const generatedContent = testPlanData.choices[0].message.content;
+              
+              console.log('✅ Step 2: Test plan generated');
               
               // Post the result as a comment
               const commentBody = '## 🤖 Copilot Feature Kickoff Complete\n\n' +
