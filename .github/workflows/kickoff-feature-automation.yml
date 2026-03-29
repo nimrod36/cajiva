@@ -30,22 +30,22 @@ jobs:
             // Read the kickoff-feature and create-test-plan prompts
             const fs = require('fs');
             
-            let kickoffPrompt, createTestPlanPrompt;
+            let learnFeatureRequest, createTestPlanPrompt;
             try {
-              kickoffPrompt = fs.readFileSync('.github/prompts/kickoff-feature.prompt.md', 'utf8');
+              learnFeatureRequest = fs.readFileSync('.github/prompts/learn-feature-request.prompt.md', 'utf8');
               createTestPlanPrompt = fs.readFileSync('.github/prompts/create-test-plan.prompt.md', 'utf8');
             } catch (error) {
               console.log('Could not read prompt files, using inline prompts');
             }
             
             // Construct the system prompt for Copilot
-            const systemPrompt = kickoffPrompt;
+            const systemPrompt = learnFeatureRequest;
             
             
-            const userPrompt = 'Generate a comprehensive BDD test plan for this issue:\n\n' +
-              '**Title**: ' + issueTitle + '\n' +
-              '**Labels**: ' + (issueLabels || 'None') + '\n\n' +
-              '**Description**:\n' + issueBody + '\n\n';
+            const userPrompt = 'Feature: ' + issueTitle + '\n' +
+               'Labels: ' + (issueLabels || 'None') + '\n\n' +
+               'Description:\n' + issueBody + '\n\n';
+
             try {
               // Call GitHub Models API (Copilot-powered)
               const modelsToken = process.env.MODELS_TOKEN || process.env.GITHUB_TOKEN;
