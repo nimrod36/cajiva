@@ -2,7 +2,7 @@ name: Auto-Create Feature PR
 
 on:
   issues:
-    types: [opened, reopened]
+    types: [opened]
 
 permissions:
   issues: write
@@ -53,24 +53,25 @@ jobs:
             }
             
             // Construct the system prompt for Copilot
-            const systemPrompt = 'You are an expert BDD test plan generator following the kickoff-feature workflow.\n\n' +
-              (kickoffPrompt || '') + '\n\n' +
-              'METHODOLOGY (from create-test-plan):\n' +
-              (createTestPlanPrompt || '') + '\n\n' +
-              'Generate comprehensive Gherkin scenarios following these principles:\n\n' +
-              '1. **Declarative Style**: Focus on behavior, not implementation\n' +
-              '2. **Three Amigos Perspective**: Product, Developer, and Tester perspectives\n' +
-              '3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios\n' +
-              '4. **Coverage**: Include happy paths, edge cases, error handling, data validation\n' +
-              '5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors\n\n' +
-              'Output ONLY the Gherkin feature file content, no markdown formatting or explanations.';
+            const systemPrompt = kickoffPrompt || '';
+            //const systemPrompt = 'You are an expert BDD test plan generator following the kickoff-feature workflow.\n\n' +
+            //  (kickoffPrompt || '') + '\n\n' +
+            //  'METHODOLOGY (from create-test-plan):\n' +
+            //  (createTestPlanPrompt || '') + '\n\n' +
+            //  'Generate comprehensive Gherkin scenarios following these principles:\n\n' +
+            //  '1. **Declarative Style**: Focus on behavior, not implementation\n' +
+            //  '2. **Three Amigos Perspective**: Product, Developer, and Tester perspectives\n' +
+            //  '3. **Structure**: Use proper Gherkin format with Feature, Background, Scenarios\n' +
+            //  '4. **Coverage**: Include happy paths, edge cases, error handling, data validation\n' +
+            //  '5. **Anti-Fragility**: Tests serve as living documentation, stable across refactors\n\n' +
+            //  'Output ONLY the Gherkin feature file content, no markdown formatting or explanations.';
             
             const userPrompt = 'Generate a comprehensive BDD test plan for this issue:\n\n' +
               '**Title**: ' + issueTitle + '\n' +
               '**Labels**: ' + (issueLabels || 'None') + '\n\n' +
-              '**Description**:\n' + issueBody + '\n\n' +
-              'Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.\n\n' +
-              'Output ONLY the Gherkin content starting with "Feature:", no markdown code blocks.';
+              '**Description**:\n' + issueBody + '\n\n' ;
+            //  'Create detailed Gherkin scenarios with Feature description, Background (if needed), and multiple Scenarios covering happy paths, edge cases, and error conditions.\n\n' +
+            //  'Output ONLY the Gherkin content starting with "Feature:", no markdown code blocks.';
             
             try {
               // Call GitHub Models API (Copilot-powered)

@@ -212,3 +212,4 @@ GitHub Actions automatically runs tests on:
 - Pull requests to `main` or `develop`
 
 Tests run across Ruby versions 2.7, 3.0, and 3.1.
+# Trigger CI
