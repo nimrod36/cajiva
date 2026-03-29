@@ -6,7 +6,8 @@ on:
 
 permissions:
   issues: write
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
   kickoff-feature:
@@ -109,25 +110,138 @@ jobs:
               
               console.log('✅ Step 2: Test plan generated');
               
-              // Post the result as a comment
-              const commentBody = '## 🤖 Copilot Feature Kickoff Complete\n\n' +
+              // Extract the file path and Gherkin content from the Final Gherkin section
+              const finalGherkinMatch = generatedContent.match(/###\s+✅\s+Final Gherkin.*?`(specs\/[^`]+\.feature)`[^`]*```gherkin\n([\s\S]+?)```/i);
+              
+              let featureFilePath, gherkinContent;
+              if (finalGherkinMatch) {
+                featureFilePath = finalGherkinMatch[1];
+                gherkinContent = finalGherkinMatch[2].trim();
+                console.log('✅ Extracted path: ' + featureFilePath);
+              } else {
+                // Fallback: try to find any file path and gherkin block
+                const pathMatch = generatedContent.match(/`(specs\/[^`]+\.feature)`/);
+                const codeMatch = generatedContent.match(/```gherkin\n([\s\S]+?)```/);
+                if (pathMatch && codeMatch) {
+                  featureFilePath = pathMatch[1];
+                  gherkinContent = codeMatch[1].trim();
+                  console.log('✅ Extracted path (fallback): ' + featureFilePath);
+                } else {
+                  throw new Error('Could not extract file path and Gherkin content from AI response');
+                }
+              }
+              
+              // Create branch name from issue
+              const branchName = 'feature/issue-' + issueNumber + '-' + issueTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
+              
+              // Get default branch
+              const { data: repo } = await github.rest.repos.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              const defaultBranch = repo.default_branch;
+              
+              // Get the SHA of the default branch
+              const { data: refData } = await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/' + defaultBranch
+              });
+              const baseSha = refData.object.sha;
+              
+              // Create new branch
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/heads/' + branchName,
+                sha: baseSha
+              });
+              
+              console.log('✅ Created branch: ' + branchName);
+              
+              // Create the feature file
+              const featureContent = Buffer.from(gherkinContent).toString('base64');
+              
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: featureFilePath,
+                message: 'Add BDD test plan for issue #' + issueNumber + ': ' + issueTitle,
+                content: featureContent,
+                branch: branchName
+              });
+              
+              console.log('✅ Created feature file: ' + featureFilePath);
+              
+              // Create step definitions stub file
+              const featureName = featureFilePath.match(/specs\/([^\/]+)\//)[1];
+              const stepDefsFile = 'specs/' + featureName + '/step_definitions/' + featureName + '_steps.rb';
+              
+              const stepDefsContent = '# Step definitions for ' + issueTitle + '\n' +
+                '# Generated from issue #' + issueNumber + '\n\n' +
+                '# Implement your step definitions here\n';
+              
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: stepDefsFile,
+                message: 'Add step definitions stub for issue #' + issueNumber,
+                content: Buffer.from(stepDefsContent).toString('base64'),
+                branch: branchName
+              });
+              
+              console.log('✅ Created step definitions stub: ' + stepDefsFile);
+              
+              // Create Pull Request
+              const prBody = '## 🤖 Auto-generated BDD Test Plan\n\n' +
+                '**Issue:** #' + issueNumber + '\n' +
+                '**Feature File:** `' + featureFilePath + '`\n' +
+                '**Step Definitions:** `' + stepDefsFile + '`\n\n' +
+                '### AI-Generated Content\n\n' +
                 generatedContent + '\n\n' +
                 '---\n\n' +
                 '### Next Steps\n' +
-                '1. Review the test scenarios above\n' +
-                '2. Use [`@copilot /add-test-coverage`](.github/prompts/add-test-coverage.prompt.md) to extend coverage\n' +
-                '3. Implement step definitions in `specs/*/step_definitions/`\n' +
-                '4. Run tests with `cucumber`\n\n' +
-                '*Generated using [`/kickoff-feature`](.github/prompts/kickoff-feature.prompt.md) prompt*';
+                '1. Review the scenarios in [`' + featureFilePath + '`](../blob/' + branchName + '/' + featureFilePath + ')\n' +
+                '2. Implement step definitions in [`' + stepDefsFile + '`](../blob/' + branchName + '/' + stepDefsFile + ')\n' +
+                '3. Run tests: `cucumber ' + featureFilePath + '`\n' +
+                '4. Use [`@copilot /add-test-coverage`](.github/prompts/add-test-coverage.prompt.md) to extend coverage\n\n' +
+                '*Closes #' + issueNumber + ' once merged*';
+
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Feature: ' + issueTitle,
+                head: branchName,
+                base: defaultBranch,
+                body: prBody
+              });
+              
+              console.log('✅ Created pull request #' + pr.number);
+              
+              // Add labels
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['auto-generated', 'bdd-test-plan']
+              });
+              
+              // Comment on the original issue with PR link
+              const issueComment = '## ✅ BDD Test Plan Generated\n\n' +
+                '**Pull Request:** #' + pr.number + '\n' +
+                '**Branch:** `' + branchName + '`\n' +
+                '**Feature File:** `' + featureFilePath + '`\n\n' +
+                'Review the comprehensive test plan in the PR!\n\n' +
+                '*Generated using two-step AI workflow: feature analysis → test plan*';
               
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.payload.issue.number,
-                body: commentBody
+                issue_number: issueNumber,
+                body: issueComment
               });
               
-              console.log('✅ Feature kickoff completed successfully');
+              console.log('✅ All automation steps completed successfully');
               
             } catch (error) {
               console.error('❌ Error generating feature kickoff:', error);
