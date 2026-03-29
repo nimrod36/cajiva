@@ -2,11 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
-    paths-ignore:
-      - '.github/workflows/**'
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
     
 
 jobs:
@@ -15,7 +13,7 @@ jobs:
     
     strategy:
       matrix:
-        ruby-version: ['2.7', '3.0', '3.1']
+        ruby-version: [ '2.7', '3.0', '3.1' ]
     
     steps:
     - uses: actions/checkout@v3
