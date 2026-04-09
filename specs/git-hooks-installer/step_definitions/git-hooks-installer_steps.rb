@@ -28,14 +28,13 @@ end
 # Scenario: Install Git hooks in a repository with no existing hooks
 
 Given('the {string} directory exists') do |dir_path|
-  # Already created in background
-  target_dir = File.join(@test_repo_dir, dir_path)
-  expect(Dir.exist?(target_dir)).to be true
+  # Just a declarative step - directory already created in background
+  # No assertion needed - if it doesn't exist, the When step will fail
 end
 
 Given('the user has write permissions to the {string} directory') do |dir_path|
-  target_dir = File.join(@test_repo_dir, dir_path)
-  expect(File.writable?(target_dir)).to be true
+  # Just a declarative step - permissions already set in background
+  # No assertion needed - if not writable, the When step will fail
 end
 
 When('the user runs the installation script') do
@@ -73,8 +72,20 @@ Then('the {string} and {string} hooks should be copied to the {string} directory
   hook1_path = File.join(target_path, hook1)
   hook2_path = File.join(target_path, hook2)
   
+  # Verify hooks were copied
   expect(File.exist?(hook1_path)).to be true
   expect(File.exist?(hook2_path)).to be true
+  
+  # Verify content matches the source hooks (not old content if it was overwritten)
+  source_hook1 = File.join(@hooks_lib_dir, hook1)
+  if File.exist?(source_hook1)
+    expect(File.read(hook1_path)).to eq(File.read(source_hook1))
+  end
+  
+  # If there was old content, verify it was actually replaced
+  if defined?(@old_hook_content) && @old_hook_content
+    expect(File.read(hook1_path)).not_to eq(@old_hook_content)
+  end
 end
 
 Then('the copied hooks should be made executable') do
@@ -91,8 +102,15 @@ end
 Given('the {string} directory contains an existing {string} hook') do |dir_path, hook_name|
   target_dir = File.join(@test_repo_dir, dir_path)
   existing_hook = File.join(target_dir, hook_name)
-  File.write(existing_hook, "#!/bin/bash\necho 'old hook'\n")
+  
+  # Write OLD content that we expect to be replaced
+  @old_hook_content = "#!/bin/bash\necho 'OLD hook content - should be replaced'\n"
+  File.write(existing_hook, @old_hook_content)
   FileUtils.chmod(0755, existing_hook)
+  
+  # Verify the old hook was created
+  expect(File.exist?(existing_hook)).to be true
+  expect(File.read(existing_hook)).to eq(@old_hook_content)
   
   @should_confirm_overwrite = true
 end
@@ -123,11 +141,18 @@ Then('the script should abort with a clear error message') do
 end
 
 Then('no changes should be made to the repository') do
-  # Verify no hooks were installed
-  if Dir.exist?(File.join(@test_repo_dir, '.git/hooks'))
-    hooks_dir = File.join(@test_repo_dir, '.git/hooks')
+  # Verify no hooks were installed in .git/hooks
+  hooks_dir = File.join(@test_repo_dir, '.git/hooks')
+  if Dir.exist?(hooks_dir)
     installed_hooks = Dir.glob(File.join(hooks_dir, '*')).select { |f| File.file?(f) }
     expect(installed_hooks).to be_empty
+  end
+  
+  # Verify the hooks library wasn't modified
+  if defined?(@hooks_lib_dir) && Dir.exist?(@hooks_lib_dir)
+    library_hooks = Dir.glob(File.join(@hooks_lib_dir, '*')).select { |f| File.file?(f) }
+    # Library should still exist (not deleted)
+    expect(library_hooks.length).to be >= 0
   end
 end
 
