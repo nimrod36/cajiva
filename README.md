@@ -220,4 +220,13 @@ GitHub Actions automatically runs tests on:
 - Pull requests to `main`
 
 Tests run across Ruby versions 2.7, 3.0, and 3.1.
-# Trigger CI
+
+## Trigger CI
+
+GitHub Actions CI is automatically triggered by:
+
+1. **Push to main branch**: Any commit pushed directly to `main` triggers the full test suite
+2. **Pull Request to main**: Opening or updating a PR targeting `main` runs all tests
+   - RSpec unit tests across Ruby 2.7, 3.0, and 3.1
+   - Cucumber BDD scenarios with strict undefined step checking
+   - Tests must pass before merge is allowed
