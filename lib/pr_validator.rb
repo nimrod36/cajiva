@@ -8,17 +8,17 @@ module Cajiva
   class PRValidator
     class ValidationError < StandardError; end
 
+    DEFAULT_SPECS_PATH = 'specs/'
+    REPORT_PATH = 'reports/cucumber_report.json'
+    STEP_STATUS_PASSED = 'passed'
+    STEP_STATUS_FAILED = 'failed'
+    STEP_STATUS_UNDEFINED = 'undefined'
+
     attr_reader :undefined_steps, :failed_steps, :passed_steps, :total_steps
 
-    def initialize(specs_path = 'specs/')
+    def initialize(specs_path = DEFAULT_SPECS_PATH)
       @specs_path = specs_path
-      @undefined_steps = []
-      @failed_steps = []
-      @passed_steps = []
-      @total_steps = 0
-      @exit_status = nil
-      @test_output = ''
-      @test_errors = ''
+      reset_test_state
     end
 
     def validate!
@@ -35,7 +35,7 @@ module Cajiva
       @failed_steps.empty?
     end
 
-    def tests?
+    def has_tests?
       @total_steps.positive?
     end
 
@@ -46,19 +46,39 @@ module Cajiva
     end
 
     def valid?
-      tests? && all_tests_implemented? && all_tests_passing?
+      has_tests? && all_tests_implemented? && all_tests_passing?
     end
 
     private
 
+    def reset_test_state
+      @undefined_steps = []
+      @failed_steps = []
+      @passed_steps = []
+      @total_steps = 0
+      @exit_status = nil
+      @test_output = ''
+      @test_errors = ''
+    end
+
     def build_failure_reasons
       reasons = []
-      reasons << 'Missing coverage: no test cases associated with the pull request' unless tests?
-      unless all_tests_implemented?
-        reasons << "Missing coverage: #{@undefined_steps.length} test step(s) not implemented"
-      end
-      reasons << "Failing tests: #{@failed_steps.length} test(s) not passing" unless all_tests_passing?
+      reasons << no_tests_message unless has_tests?
+      reasons << undefined_steps_message unless all_tests_implemented?
+      reasons << failing_tests_message unless all_tests_passing?
       reasons
+    end
+
+    def no_tests_message
+      'Missing coverage: no test cases associated with the pull request'
+    end
+
+    def undefined_steps_message
+      "Missing coverage: #{@undefined_steps.length} test step(s) not implemented"
+    end
+
+    def failing_tests_message
+      "Failing tests: #{@failed_steps.length} test(s) not passing"
     end
 
     def run_cucumber_tests
@@ -66,7 +86,7 @@ module Cajiva
         'bundle', 'exec', 'cucumber', @specs_path,
         '--strict-undefined',
         '--format', 'json',
-        '--out', 'reports/cucumber_report.json'
+        '--out', REPORT_PATH
       )
 
       @exit_status = status.exitstatus
@@ -75,10 +95,9 @@ module Cajiva
     end
 
     def parse_test_results
-      report_path = 'reports/cucumber_report.json'
-      raise ValidationError, "Report not found: #{report_path}" unless File.exist?(report_path)
+      raise ValidationError, "Report not found: #{REPORT_PATH}" unless File.exist?(REPORT_PATH)
 
-      report = JSON.parse(File.read(report_path))
+      report = JSON.parse(File.read(REPORT_PATH))
       report.each { |feature| parse_feature(feature) }
     end
 
@@ -96,11 +115,12 @@ module Cajiva
 
     def parse_step(step)
       @total_steps += 1
+      status = step['result']['status']
 
-      case step['result']['status']
-      when 'passed' then @passed_steps << step
-      when 'failed' then @failed_steps << build_failed_step_hash(step)
-      when 'undefined' then @undefined_steps << build_undefined_step_hash(step)
+      case status
+      when STEP_STATUS_PASSED then @passed_steps << step
+      when STEP_STATUS_FAILED then @failed_steps << build_failed_step_hash(step)
+      when STEP_STATUS_UNDEFINED then @undefined_steps << build_undefined_step_hash(step)
       end
     end
 

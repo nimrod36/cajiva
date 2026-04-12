@@ -11,10 +11,12 @@ A Ruby-based data analysis application that performs linear regression on temper
 - **API**: RESTful endpoint serving regression data
 
 ### Code Quality & DevOps
-- **Git Hooks**: Automatic test and linting on commit and push
-- **GitHub Actions CI**: Continuous integration across multiple Ruby versions
-- **Test Suite**: Comprehensive RSpec tests with 10 examples
-- **Code Quality**: RuboCop linting with custom configuration
+- **Git Hooks**: Automated test execution and linting on commit/push
+- **GitHub Actions CI**: Multi-version Ruby testing (2.7, 3.0, 3.1)
+- **Test Coverage**: RSpec unit tests + Cucumber BDD scenarios
+- **PR Validation**: Automated validation ensuring all tests pass before merge
+- **Code Quality**: RuboCop linting with project-specific configuration
+- **Repository Maintenance**: Clean, organized structure following best practices
 
 ### AI-Powered Development Automation ✨
 - **🤖 Auto Test Plan Generation**: New issues automatically get comprehensive BDD test plans via Copilot
@@ -76,8 +78,22 @@ This project includes a Procfile and Rack config so it can be deployed to common
 
 ### Running Tests
 
+Run RSpec unit tests:
+
 ```bash
 bundle exec rspec
+```
+
+Run Cucumber BDD scenarios:
+
+```bash
+bundle exec cucumber
+```
+
+Run tests for a specific feature:
+
+```bash
+bundle exec cucumber specs/repository-maintenance/
 ```
 
 ### Running Linter
@@ -94,14 +110,23 @@ cajiva/
 ├── main.rb                   # CLI application
 ├── lib/
 │   ├── linear_regression.rb  # Regression algorithms (matrix & formula)
-│   ├── json_data_fetcher.rb  # Data loading from JSON
+│   ├── json_data_fetcher.rb  # JSON data loading
+│   ├── pr_validator.rb       # PR validation with test coverage checks
 │   ├── database_connection.rb # MySQL support (optional)
 │   └── version.rb            # Version info
 ├── data/
-│   └── temperature_data.json # Sample temperature dataset
+│   └── temperature_data.json # Temperature dataset (Tel Aviv, June 2024)
 ├── public/
-│   └── index.html           # Web UI with Chart.js
-└── spec/                    # RSpec tests
+│   └── index.html           # Web UI with Chart.js visualization
+├── spec/                    # RSpec unit tests
+├── specs/                   # Cucumber BDD feature tests
+│   ├── git-hooks-installer/
+│   ├── test-pr-merge/
+│   └── repository-maintenance/
+└── hooks/                   # Git hooks for automated quality checks
+    ├── pre-commit           # Test & lint before commit
+    ├── pre-push             # Full test suite before push
+    └── README.md            # Hook documentation
 ```
 
 ## Linear Regression Methods
@@ -143,12 +168,34 @@ Returns JSON with temperature data and regression analysis:
 
 ## Git Hooks
 
-The project includes two automatic hooks:
+The project includes automated quality checks via Git hooks:
 
-- **pre-commit**: Runs tests and linting before each commit
-- **pre-push**: Runs full test suite before pushing to remote
+### Pre-Commit Hook
+Runs before each commit to ensure code quality:
+- Executes RSpec unit tests
+- Runs Cucumber BDD scenarios
+- Checks code coverage (80% threshold)
+- Runs RuboCop linter
 
-These ensure code quality before it reaches the repository.
+### Pre-Push Hook
+Runs before pushing to remote to prevent broken builds:
+- Full test suite execution
+- Coverage validation
+- All scenarios must pass
+
+### Installation
+
+Install hooks using the provided script:
+
+```bash
+./install-hooks.sh
+```
+
+Skip hooks when needed:
+
+```bash
+SKIP_HOOKS=1 git commit -m "message"
+```
 
 ## CI/CD
 
