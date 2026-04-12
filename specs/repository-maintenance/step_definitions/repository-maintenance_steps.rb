@@ -250,11 +250,10 @@ When('the structure is reorganized for maintainability') do
     no_clutter_in_root: Dir.glob(File.join(@repo_root, '*.{tmp,log,bak,old}')).empty?
   }
   
-  # Check for empty or unnecessary directories
-  @clean_dirs = ['tmp', 'bin'].all? do |dir|
-    path = File.join(@repo_root, dir)
-    !Dir.exist?(path) || Dir.children(path).empty?
-  end
+  # Check for unnecessary files in tmp/bin (excluding test artifacts)
+  tmp_clutter = Dir.glob(File.join(@repo_root, 'tmp/*')).reject { |f| f.end_with?('.json', '.html') }
+  bin_clutter = Dir.glob(File.join(@repo_root, 'bin/*'))
+  @clean_dirs = tmp_clutter.empty? && bin_clutter.empty?
 end
 
 Then('all existing paths and integrations should remain functional') do
