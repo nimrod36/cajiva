@@ -11,14 +11,14 @@ A Ruby-based data analysis application that performs linear regression on temper
 - **API**: RESTful endpoint serving regression data
 
 ### Code Quality & DevOps
-- **Git Hooks**: Automatic test and linting on commit and push
-- **GitHub Actions CI**: Continuous integration across multiple Ruby versions
-- **Test Suite**: Comprehensive RSpec tests with 10 examples
-- **Code Quality**: RuboCop linting with custom configuration
+- **Git Hooks**: Automated test execution on commit/push
+- **GitHub Actions CI**: Multi-version Ruby testing (2.7, 3.0, 3.1)
+- **Test Coverage**: RSpec unit tests + Cucumber BDD scenarios
+- **PR Validation**: Automated validation ensuring all tests pass before merge
+- **Repository Maintenance**: Clean, organized structure following best practices
 
 ### AI-Powered Development Automation ✨
 - **🤖 Auto Test Plan Generation**: New issues automatically get comprehensive BDD test plans via Copilot
-- **🔗 Linear Integration**: Sync Linear issues to GitHub with automatic feature kickoff
 - **📝 Copilot Prompts**: Custom prompts for test coverage and feature development
 - **🎯 Workflow Automation**: `/kickoff-feature` prompt generates Gherkin scenarios on issue creation
 
@@ -57,33 +57,24 @@ Run the command-line analysis:
 ruby main.rb
 ```
 
-## Hosting (Render or Railway)
-
-This project includes a Procfile and Rack config so it can be deployed to common Ruby hosts.
-
-### Render (recommended)
-
-1. Create a new **Web Service** from your GitHub repo.
-2. Set **Build Command**: `bundle install`
-3. Set **Start Command**: `bundle exec rackup -p $PORT -o 0.0.0.0`
-4. Deploy. Render will provide a public URL.
-
-### Railway
-
-1. Create a new service from GitHub.
-2. Use **Start Command**: `bundle exec rackup -p $PORT -o 0.0.0.0`
-3. Deploy and use the generated URL.
-
 ### Running Tests
+
+Run RSpec unit tests:
 
 ```bash
 bundle exec rspec
 ```
 
-### Running Linter
+Run Cucumber BDD scenarios:
 
 ```bash
-bundle exec rubocop
+bundle exec cucumber
+```
+
+Run tests for a specific feature:
+
+```bash
+bundle exec cucumber specs/repository-maintenance/
 ```
 
 ## Project Structure
@@ -94,14 +85,24 @@ cajiva/
 ├── main.rb                   # CLI application
 ├── lib/
 │   ├── linear_regression.rb  # Regression algorithms (matrix & formula)
-│   ├── json_data_fetcher.rb  # Data loading from JSON
+│   ├── json_data_fetcher.rb  # JSON data loading
+│   ├── data_fetcher.rb       # Data fetching interface
+│   ├── pr_validator.rb       # PR validation with test coverage checks
 │   ├── database_connection.rb # MySQL support (optional)
 │   └── version.rb            # Version info
 ├── data/
-│   └── temperature_data.json # Sample temperature dataset
+│   └── temperature_data.json # Temperature dataset (Tel Aviv, June 2024)
 ├── public/
-│   └── index.html           # Web UI with Chart.js
-└── spec/                    # RSpec tests
+│   └── index.html           # Web UI with Chart.js visualization
+├── spec/                    # RSpec unit tests
+├── specs/                   # Cucumber BDD feature tests
+│   ├── git-hooks-installer/
+│   ├── test-pr-merge/
+│   └── repository-maintenance/
+└── hooks/                   # Git hooks for automated quality checks
+    ├── pre-commit           # Test & lint before commit
+    ├── pre-push             # Full test suite before push
+    └── README.md            # Hook documentation
 ```
 
 ## Linear Regression Methods
@@ -143,21 +144,40 @@ Returns JSON with temperature data and regression analysis:
 
 ## Git Hooks
 
-The project includes two automatic hooks:
+The project includes automated quality checks via Git hooks:
 
-- **pre-commit**: Runs tests and linting before each commit
-- **pre-push**: Runs full test suite before pushing to remote
+### Pre-Commit Hook
+Runs before each commit to ensure code quality:
+- Executes RSpec unit tests
+- Runs Cucumber BDD scenarios
 
-These ensure code quality before it reaches the repository.
+### Pre-Push Hook
+Runs before pushing to remote to prevent broken builds:
+- Full RSpec test suite execution
+- Full Cucumber BDD scenarios
+- All tests must pass
+
+### Installation
+
+Install hooks using the provided script:
+
+```bash
+./install-hooks.sh
+```
+
+Skip hooks when needed:
+
+```bash
+SKIP_HOOKS=1 git commit -m "message"
+```
 
 ## CI/CD
 
-GitHub Actions workflows automatically run on every push:
-- Ruby 2.7, 3.0, 3.1 compatibility testing
+GitHub Actions workflows automatically run:
+- Ruby 2.7, 3.0, 3.1 compatibility testing on push to `main`
 - RSpec test suite execution
-- RuboCop linting
+- Cucumber BDD scenarios
 - BDD test plan generation on new issues
-- Linear issue synchronization (via webhook)
 
 ## AI-Powered Feature Development
 
@@ -166,7 +186,7 @@ GitHub Actions workflows automatically run on every push:
 When you create a new issue, GitHub Copilot automatically generates a comprehensive BDD test plan:
 
 ```bash
-# Create an issue (or use Linear webhook)
+# Create an issue
 # The kickoff-feature-automation workflow triggers automatically
 # Within 30 seconds, a comment appears with:
 # - Gherkin scenarios
@@ -190,26 +210,23 @@ The repository includes custom Copilot prompts:
   - Extends existing feature files with additional scenarios
   - Implements step definitions in Ruby/Cucumber
 
-### Linear Integration
-
-Connect Linear issues to GitHub for automated feature kickoff:
-
-1. **Configure Linear webhook** to send issues to GitHub repository dispatch endpoint
-2. **Issues sync automatically** with Linear context (priority, team, assignee)
-3. **Target repo routing** via issue body (`repo: owner/name`) or labels (`repo:owner/name`)
-4. **Copilot generates test plan** on issue creation
-
-See [.github/workflows/linear-webhook-handler.yml](.github/workflows/linear-webhook-handler.yml) for implementation details.
-
 ### Workflow Files
 
 - [kickoff-feature-automation.yml](.github/workflows/kickoff-feature-automation.yml) - Auto-generates test plans on issue creation
-- [linear-webhook-handler.yml](.github/workflows/linear-webhook-handler.yml) - Syncs Linear issues to GitHub
-- [generate-test-plan.yml](.github/workflows/generate-test-plan.yml) - Legacy test plan generator (kept for compatibility)
+- [ci.yml](.github/workflows/ci.yml) - Continuous integration testing across Ruby versions
 
 GitHub Actions automatically runs tests on:
-- Push to `main` or `develop`
-- Pull requests to `main` or `develop`
+- Push to `main`
+- Pull requests to `main`
 
 Tests run across Ruby versions 2.7, 3.0, and 3.1.
-# Trigger CI
+
+## Trigger CI
+
+GitHub Actions CI is automatically triggered by:
+
+1. **Push to main branch**: Any commit pushed directly to `main` triggers the full test suite
+2. **Pull Request to main**: Opening or updating a PR targeting `main` runs all tests
+   - RSpec unit tests across Ruby 2.7, 3.0, and 3.1
+   - Cucumber BDD scenarios with strict undefined step checking
+   - Tests must pass before merge is allowed
