@@ -11,16 +11,15 @@ A Ruby-based data analysis application that performs linear regression on temper
 - **API**: RESTful endpoint serving regression data
 
 ### Code Quality & DevOps
-- **Git Hooks**: Automated test execution and linting on commit/push
+- **Git Hooks**: Automated test execution on commit/push
 - **GitHub Actions CI**: Multi-version Ruby testing (2.7, 3.0, 3.1)
 - **Test Coverage**: RSpec unit tests + Cucumber BDD scenarios
 - **PR Validation**: Automated validation ensuring all tests pass before merge
-- **Code Quality**: RuboCop linting with project-specific configuration
 - **Repository Maintenance**: Clean, organized structure following best practices
 
 ### AI-Powered Development Automation ✨
 - **🤖 Auto Test Plan Generation**: New issues automatically get comprehensive BDD test plans via Copilot
-- ** Copilot Prompts**: Custom prompts for test coverage and feature development
+- **📝 Copilot Prompts**: Custom prompts for test coverage and feature development
 - **🎯 Workflow Automation**: `/kickoff-feature` prompt generates Gherkin scenarios on issue creation
 
 ## Setup
@@ -95,12 +94,6 @@ Run tests for a specific feature:
 bundle exec cucumber specs/repository-maintenance/
 ```
 
-### Running Linter
-
-```bash
-bundle exec rubocop
-```
-
 ## Project Structure
 
 ```
@@ -110,6 +103,7 @@ cajiva/
 ├── lib/
 │   ├── linear_regression.rb  # Regression algorithms (matrix & formula)
 │   ├── json_data_fetcher.rb  # JSON data loading
+│   ├── data_fetcher.rb       # Data fetching interface
 │   ├── pr_validator.rb       # PR validation with test coverage checks
 │   ├── database_connection.rb # MySQL support (optional)
 │   └── version.rb            # Version info
@@ -173,14 +167,12 @@ The project includes automated quality checks via Git hooks:
 Runs before each commit to ensure code quality:
 - Executes RSpec unit tests
 - Runs Cucumber BDD scenarios
-- Checks code coverage (80% threshold)
-- Runs RuboCop linter
 
 ### Pre-Push Hook
 Runs before pushing to remote to prevent broken builds:
-- Full test suite execution
-- Coverage validation
-- All scenarios must pass
+- Full RSpec test suite execution
+- Full Cucumber BDD scenarios
+- All tests must pass
 
 ### Installation
 
@@ -198,10 +190,10 @@ SKIP_HOOKS=1 git commit -m "message"
 
 ## CI/CD
 
-GitHub Actions workflows automatically run on every push:
-- Ruby 2.7, 3.0, 3.1 compatibility testing
+GitHub Actions workflows automatically run:
+- Ruby 2.7, 3.0, 3.1 compatibility testing on push to `main`
 - RSpec test suite execution
-- RuboCop linting
+- Cucumber BDD scenarios
 - BDD test plan generation on new issues
 
 ## AI-Powered Feature Development
@@ -241,8 +233,8 @@ The repository includes custom Copilot prompts:
 - [ci.yml](.github/workflows/ci.yml) - Continuous integration testing across Ruby versions
 
 GitHub Actions automatically runs tests on:
-- Push to `main` or `develop`
-- Pull requests to `main` or `develop`
+- Push to `main`
+- Pull requests to `main`
 
 Tests run across Ruby versions 2.7, 3.0, and 3.1.
 # Trigger CI
