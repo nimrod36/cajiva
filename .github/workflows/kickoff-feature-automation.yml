@@ -201,7 +201,7 @@ jobs:
                 '### AI-Generated Content\n\n' +
                 '### Next Steps\n' +
                 '1. Review the scenarios in [`' + featureFilePath + '`](../blob/' + branchName + '/' + featureFilePath + ')\n' +
-                '2. Implement the feature in the issue `' + issueTitle + '` (either by prompt or manually)\n' +
+                '2. Implement the feature in the issue #' + issueNumber + ' (either by prompt or manually)\n' +
                 '3. Use [`@copilot /implement-step-definitions`](.github/prompts/implement-step-definitions.prompt.md) to implement the steps defined in the scenarios\n\n' +
                 '4. Run tests: `cucumber ' + featureFilePath + '`\n' +
                 '*Closes #' + issueNumber + ' once merged*';
