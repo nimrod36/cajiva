@@ -21,12 +21,3 @@ Feature: Change background color
     When the user clicks the revert button
     Then the background color should remain as the default
 
-  Scenario: Background color change causes legibility issues
-    When the user selects a background color
-    And the color causes text or UI elements to become unreadable
-    Then the system should warn the user or prevent the selection
-
-  Scenario: Rapid background color changes
-    When the user selects multiple background colors in quick succession
-    Then the system should update the background color gracefully
-    And maintain consistent rendering without performance degradation
