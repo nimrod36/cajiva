@@ -17,6 +17,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s ease;
         }
 
         .container {
@@ -262,6 +263,40 @@
         .delete-overlay::before {
             content: '🗑️ ';
         }
+
+        /* Background color customization controls */
+        .bg-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .bg-controls label {
+            font-size: 0.9em;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .bg-controls input[type="color"] {
+            width: 50px;
+            height: 35px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .bg-controls button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -310,6 +345,13 @@
         </div>
     </div>
 
+    <!-- Background color customization controls -->
+    <div class="bg-controls">
+        <label for="bgColorPicker">Background:</label>
+        <input type="color" id="bgColorPicker" value="#667eea">
+        <button id="revertButton" onclick="revertBackgroundColor()">Revert</button>
+    </div>
+
     <script>
         let chart = null;
         let currentData = {
@@ -321,6 +363,102 @@
         let undoStack = [];
         let hoveredPointIndex = null;
         let hideOverlayTimeout = null;
+
+        // Background color management
+        const DEFAULT_BG_COLOR = '#667eea';
+        const DEFAULT_BG_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        let previousBackgroundColor = DEFAULT_BG_GRADIENT;
+        let currentBackgroundColor = DEFAULT_BG_GRADIENT;
+
+        // Background color functions
+        function updateBackgroundColor(color) {
+            if (!color) return;
+            
+            // Store previous color before updating
+            previousBackgroundColor = currentBackgroundColor;
+            
+            // Update current color
+            if (color.startsWith('#')) {
+                // Convert hex to gradient
+                currentBackgroundColor = `linear-gradient(135deg, ${color} 0%, ${color} 100%)`;
+            } else {
+                currentBackgroundColor = color;
+            }
+            
+            // Apply to body
+            document.body.style.background = currentBackgroundColor;
+            
+            // Save to localStorage if available
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('cajiva_bg_color', currentBackgroundColor);
+                    localStorage.setItem('cajiva_prev_bg_color', previousBackgroundColor);
+                }
+            } catch (e) {
+                // localStorage not available or blocked
+                console.log('localStorage not available');
+            }
+        }
+
+        function revertBackgroundColor() {
+            // Swap current and previous
+            const temp = currentBackgroundColor;
+            currentBackgroundColor = previousBackgroundColor;
+            previousBackgroundColor = temp;
+            
+            // Apply the reverted color
+            document.body.style.background = currentBackgroundColor;
+            
+            // Update color picker if it's a solid color
+            const colorPicker = document.getElementById('bgColorPicker');
+            if (currentBackgroundColor.includes('#')) {
+                const match = currentBackgroundColor.match(/#[0-9a-fA-F]{6}/);
+                if (match) {
+                    colorPicker.value = match[0];
+                }
+            }
+            
+            // Save to localStorage if available
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('cajiva_bg_color', currentBackgroundColor);
+                    localStorage.setItem('cajiva_prev_bg_color', previousBackgroundColor);
+                }
+            } catch (e) {
+                // localStorage not available or blocked
+                console.log('localStorage not available');
+            }
+        }
+
+        function loadSavedBackgroundColor() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const savedColor = localStorage.getItem('cajiva_bg_color');
+                    const savedPrevColor = localStorage.getItem('cajiva_prev_bg_color');
+                    
+                    if (savedColor) {
+                        currentBackgroundColor = savedColor;
+                        document.body.style.background = savedColor;
+                        
+                        // Update color picker if it's a solid color
+                        const colorPicker = document.getElementById('bgColorPicker');
+                        if (savedColor.includes('#')) {
+                            const match = savedColor.match(/#[0-9a-fA-F]{6}/);
+                            if (match) {
+                                colorPicker.value = match[0];
+                            }
+                        }
+                    }
+                    
+                    if (savedPrevColor) {
+                        previousBackgroundColor = savedPrevColor;
+                    }
+                }
+            } catch (e) {
+                // localStorage not available or blocked
+                console.log('localStorage not available');
+            }
+        }
 
         // Notification system
         function showNotification(message, type = 'info', options = {}) {
@@ -540,11 +678,6 @@
             } else {
                 // Delay hiding to allow clicking
                 if (hideOverlayTimeout) clearTimeout(hideOverlayTimeout);
-                hideOverlayTimeout = setTimeout(() => {
-                    deleteOverlay.style.display = 'none';
-                    hoveredPointIndex = null;
-                }, 300);
-            }
                 hideOverlayTimeout = setTimeout(() => {
                     deleteOverlay.style.display = 'none';
                     hoveredPointIndex = null;
@@ -792,12 +925,18 @@
 
         // Initialize
         loadData();
+        loadSavedBackgroundColor();
 
         // Allow Enter key to add point
         document.getElementById('newTemp').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 addDataPoint();
             }
+        });
+
+        // Background color picker event listener
+        document.getElementById('bgColorPicker').addEventListener('input', function(e) {
+            updateBackgroundColor(e.target.value);
         });
     </script>
 </body>
