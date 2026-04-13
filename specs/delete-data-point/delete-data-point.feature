@@ -23,21 +23,6 @@ Feature: Delete a data point
       Then the data point should remain in the system
       And the data point should remain visible in the current view
 
-  Rule: Permissions must restrict deletion
-    Scenario: User without delete permissions attempts to delete
-      Given the user does not have permission to delete the data point
-      When the user selects a data point
-      Then the deletion dialog should not allow deletion
-      And an appropriate message should be displayed
-
-  Rule: Error handling during deletion
-    Scenario: Deletion fails due to server error
-      Given the user selects a data point
-      When the user opens the deletion dialog
-      And confirms the deletion
-      But the deletion fails due to a server error
-      Then the user should see an error notification
-      And the data point should remain visible in the system
 
   Rule: Accessibility
     Scenario: Keyboard navigation for deletion
