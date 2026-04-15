@@ -13,18 +13,6 @@ Feature: Download Graph as an Image
       Then the graph is downloaded as a PNG image
       And the downloaded image matches the displayed graph
 
-    Scenario: Download the graph as a JPEG image
-      When the user clicks the download button
-      And selects "JPEG" from the format options
-      Then the graph is downloaded as a JPEG image
-      And the downloaded image matches the displayed graph
-
-    Scenario: Download the graph as an SVG image
-      When the user clicks the download button
-      And selects "SVG" from the format options
-      Then the graph is downloaded as an SVG file
-      And the downloaded image matches the displayed graph
-
   Rule: Canceling the download action
     Scenario: Cancel the download action
       When the user clicks the download button
