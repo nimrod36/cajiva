@@ -363,6 +363,57 @@
             padding: 8px 15px;
             font-size: 0.9em;
         }
+
+        /* Export graph button */
+        .export-controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        }
+
+        .btn-download:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+        }
+
+        /* Format selection dialog */
+        .format-selector {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+
+        .format-selector h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .format-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .format-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .format-option input[type="radio"] {
+            cursor: pointer;
+        }
+
+        .format-option label {
+            cursor: pointer;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -393,6 +444,26 @@
 
         <div class="card">
             <h2>Temperature Trend</h2>
+            <div class="export-controls">
+                <button class="btn-download" onclick="openExportDialog()" id="downloadButton">📥 Download Graph</button>
+            </div>
+            <div id="formatSelector" class="format-selector" style="display: none;">
+                <h4>Select Export Format</h4>
+                <div class="format-options">
+                    <div class="format-option">
+                        <input type="radio" id="formatJPEG" name="exportFormat" value="jpeg" checked>
+                        <label for="formatJPEG">JPEG</label>
+                    </div>
+                    <div class="format-option">
+                        <input type="radio" id="formatPNG" name="exportFormat" value="png">
+                        <label for="formatPNG">PNG</label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="confirmExport()">Export</button>
+                    <button class="btn-cancel" onclick="cancelExport()">Cancel</button>
+                </div>
+            </div>
             <div class="chart-container" id="chartContainer" style="position: relative;">
                 <canvas id="regressionChart"></canvas>
             </div>
@@ -1000,6 +1071,72 @@
             } catch (error) {
                 console.error('Error recalculating regression:', error);
                 alert('Error recalculating regression. Please try again.');
+            }
+        }
+
+        // Export graph functionality
+        function openExportDialog() {
+            const formatSelector = document.getElementById('formatSelector');
+            formatSelector.style.display = 'block';
+            
+            // Reset to JPEG default
+            document.getElementById('formatJPEG').checked = true;
+        }
+
+        function cancelExport() {
+            const formatSelector = document.getElementById('formatSelector');
+            formatSelector.style.display = 'none';
+        }
+
+        function confirmExport() {
+            const formatSelector = document.getElementById('formatSelector');
+            const selectedFormat = document.querySelector('input[name="exportFormat"]:checked').value;
+            
+            try {
+                if (!chart) {
+                    showNotification('No chart available to export', 'error');
+                    formatSelector.style.display = 'none';
+                    return;
+                }
+
+                // Get the canvas element
+                const canvas = document.getElementById('regressionChart');
+                
+                // Convert canvas to data URL based on selected format
+                let imageDataUrl;
+                let filename;
+                
+                if (selectedFormat === 'jpeg') {
+                    imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    filename = 'cajiva-graph.jpeg';
+                } else if (selectedFormat === 'png') {
+                    imageDataUrl = canvas.toDataURL('image/png');
+                    filename = 'cajiva-graph.png';
+                } else {
+                    throw new Error('Invalid format selected');
+                }
+
+                // Create a temporary link element to trigger download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageDataUrl;
+                downloadLink.download = filename;
+                downloadLink.style.display = 'none';
+                
+                // Append to body, click, and remove
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Hide format selector
+                formatSelector.style.display = 'none';
+                
+                // Show success notification
+                showNotification(`Graph exported successfully as ${selectedFormat.toUpperCase()}`, 'success');
+                
+            } catch (error) {
+                console.error('Error exporting graph:', error);
+                showNotification('Failed to export graph. Please try again.', 'error');
+                formatSelector.style.display = 'none';
             }
         }
 
