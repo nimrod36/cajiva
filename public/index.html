@@ -363,6 +363,76 @@
             padding: 8px 15px;
             font-size: 0.9em;
         }
+
+        /* Download button */
+        .download-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 10;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Download dialog */
+        .download-dialog {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .format-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .format-option:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .format-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .format-option input[type="radio"] {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .format-option label {
+            cursor: pointer;
+            font-size: 1em;
+            color: #333;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -394,6 +464,7 @@
         <div class="card">
             <h2>Temperature Trend</h2>
             <div class="chart-container" id="chartContainer" style="position: relative;">
+                <button class="download-btn" onclick="openDownloadDialog()">Download Graph</button>
                 <canvas id="regressionChart"></canvas>
             </div>
             
@@ -428,6 +499,27 @@
             <div class="modal-actions">
                 <button class="btn-cancel" id="cancelDeleteBtn" onclick="closeDeleteDialog()">Cancel</button>
                 <button class="btn-confirm" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download dialog -->
+    <div id="downloadModal" class="modal-overlay">
+        <div class="download-dialog" role="dialog" aria-labelledby="downloadModalTitle" aria-describedby="downloadModalDesc">
+            <div class="modal-header" id="downloadModalTitle">Download Graph</div>
+            <div class="modal-body" id="downloadModalDesc">
+                <p style="margin-bottom: 15px; color: #666;">Select the format for your download:</p>
+                <div id="formatOptions">
+                    <div class="format-option selected" onclick="selectFormat('png')">
+                        <input type="radio" id="formatPNG" name="format" value="png" checked>
+                        <label for="formatPNG">PNG</label>
+                    </div>
+                </div>
+                <div id="downloadError" style="display: none; color: #c33; margin-top: 15px; padding: 10px; background: #fee; border-radius: 5px;"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelDownloadBtn" onclick="closeDownloadDialog()">Cancel</button>
+                <button class="btn-confirm" id="confirmDownloadBtn" onclick="confirmDownload()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Download</button>
             </div>
         </div>
     </div>
@@ -1002,6 +1094,127 @@
                 alert('Error recalculating regression. Please try again.');
             }
         }
+
+        // Download functionality
+        let selectedFormat = 'png';
+
+        function selectFormat(format) {
+            selectedFormat = format;
+            // Update UI
+            document.querySelectorAll('.format-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        function openDownloadDialog() {
+            try {
+                const modal = document.getElementById('downloadModal');
+                const errorDiv = document.getElementById('downloadError');
+                
+                // Clear any previous errors
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+                
+                // Reset to PNG selection
+                selectedFormat = 'png';
+                document.querySelectorAll('.format-option').forEach(option => {
+                    option.classList.remove('selected');
+                });
+                document.querySelector('.format-option').classList.add('selected');
+                document.getElementById('formatPNG').checked = true;
+                
+                // Show modal
+                modal.classList.add('active');
+                
+                // Focus the cancel button for accessibility
+                setTimeout(() => {
+                    document.getElementById('cancelDownloadBtn').focus();
+                }, 100);
+            } catch (error) {
+                console.error('Error opening download dialog:', error);
+                showNotification('An error occurred while opening the download dialog', 'error');
+            }
+        }
+
+        function closeDownloadDialog() {
+            const modal = document.getElementById('downloadModal');
+            modal.classList.remove('active');
+        }
+
+        function confirmDownload() {
+            try {
+                const errorDiv = document.getElementById('downloadError');
+                errorDiv.style.display = 'none';
+                errorDiv.textContent = '';
+
+                if (!chart) {
+                    throw new Error('Chart not initialized');
+                }
+
+                if (selectedFormat === 'png') {
+                    downloadChartAsPNG();
+                } else {
+                    throw new Error('Unsupported format');
+                }
+            } catch (error) {
+                console.error('Error generating image:', error);
+                const errorDiv = document.getElementById('downloadError');
+                errorDiv.textContent = 'An error occurred while generating the image. Please try again.';
+                errorDiv.style.display = 'block';
+                showNotification('The system failed to generate the image', 'error');
+            }
+        }
+
+        function downloadChartAsPNG() {
+            try {
+                // Get the canvas element
+                const canvas = document.getElementById('regressionChart');
+                if (!canvas) {
+                    throw new Error('Canvas element not found');
+                }
+
+                // Convert canvas to data URL
+                const imageURL = canvas.toDataURL('image/png');
+                if (!imageURL || imageURL === 'data:,') {
+                    throw new Error('Failed to generate image data');
+                }
+
+                // Create a temporary link to trigger download
+                const link = document.createElement('a');
+                link.download = 'temperature-graph.png';
+                link.href = imageURL;
+                link.click();
+
+                // Close the dialog
+                closeDownloadDialog();
+
+                // Show success notification
+                showNotification('Graph downloaded successfully as PNG', 'success');
+            } catch (error) {
+                console.error('Error downloading PNG:', error);
+                throw error; // Re-throw to be caught by confirmDownload
+            }
+        }
+
+        // Keyboard support for download modal
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('downloadModal');
+            if (modal && modal.classList.contains('active')) {
+                if (e.key === 'Escape') {
+                    closeDownloadDialog();
+                } else if (e.key === 'Enter') {
+                    confirmDownload();
+                }
+            }
+        });
+
+        // Close download modal when clicking outside
+        document.getElementById('downloadModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDownloadDialog();
+            }
+        });
 
         // Initialize
         loadData();
