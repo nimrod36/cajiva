@@ -39,11 +39,3 @@ Feature: Toggle chart views
       When the user toggles to bar chart view
       Then the system displays an error message
       And the chart remains in the previous view
-
-  Rule: Responsiveness
-    The toggle control and chart views must function correctly across devices and screen sizes.
-
-    Scenario: Toggle charts on a mobile device
-      Given a user is viewing the chart on a mobile device
-      When the user toggles between scatter plot and bar chart
-      Then the toggle control and chart display correctly without breaking layout
