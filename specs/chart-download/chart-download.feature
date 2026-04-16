@@ -20,12 +20,4 @@ Feature: Download chart as JPEG
     When the user clicks the download button
     Then the downloaded JPEG file preserves the chart's styles, colors, labels, and legends
 
-  Scenario: Ensure cross-browser compatibility
-    Given the user is accessing the chart on a supported browser
-    When the user clicks the download button
-    Then the chart is successfully downloaded as a JPEG file
 
-  Scenario: Handle charts of varying dimensions
-    Given the chart has non-standard dimensions or aspect ratios
-    When the user clicks the download button
-    Then the downloaded JPEG file accurately represents the entire chart
