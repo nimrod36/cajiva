@@ -363,6 +363,18 @@
             padding: 8px 15px;
             font-size: 0.9em;
         }
+
+        #filterMessage {
+            min-height: 20px;
+            transition: all 0.3s ease;
+        }
+
+        #filterMessage:not(:empty) {
+            padding: 10px;
+            background: #fee;
+            border-left: 4px solid #d32f2f;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -397,6 +409,17 @@
                 <canvas id="regressionChart"></canvas>
             </div>
             
+            <div class="input-section">
+                <h3>Filter by Date Range</h3>
+                <div class="input-group">
+                    <input type="date" id="startDate" placeholder="Start Date">
+                    <input type="date" id="endDate" placeholder="End Date">
+                    <button onclick="applyDateFilter()">Apply Filter</button>
+                    <button class="btn-secondary" onclick="resetDateFilter()">Reset Filter</button>
+                </div>
+                <div id="filterMessage" style="margin-top: 10px; color: #d32f2f; font-weight: 500;"></div>
+            </div>
+
             <div class="input-section">
                 <h3>Add New Data Point</h3>
                 <div class="input-group">
@@ -438,6 +461,15 @@
             actual: [],
             regression: [],
             newPoints: []
+        };
+        let originalData = {
+            actual: [],
+            regression: []
+        };
+        let dateFilter = {
+            startDate: null,
+            endDate: null,
+            isActive: false
         };
         let deleteEnabled = true;
         let undoStack = [];
@@ -575,6 +607,10 @@
                 currentData.actual = data.actual;
                 currentData.regression = data.regression;
                 currentData.newPoints = [];
+                
+                // Store original data for filtering
+                originalData.actual = JSON.parse(JSON.stringify(data.actual));
+                originalData.regression = JSON.parse(JSON.stringify(data.regression));
 
                 updateUI(data);
                 createChart();
@@ -601,6 +637,28 @@
             if (chart) {
                 chart.destroy();
             }
+            
+            // Check if there's no data to display
+            if (currentData.actual.length === 0 && currentData.newPoints.length === 0) {
+                // Show "No data available" message
+                const chartContainer = document.getElementById('chartContainer');
+                chartContainer.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 400px; font-size: 1.5em; color: #999;">
+                        No data available
+                    </div>
+                `;
+                return;
+            }
+            
+            // Restore canvas if it was replaced
+            const chartContainer = document.getElementById('chartContainer');
+            if (!chartContainer.querySelector('canvas')) {
+                chartContainer.innerHTML = '<canvas id="regressionChart"></canvas>';
+            }
+            
+            // Get the canvas context (need to re-query after potential innerHTML change)
+            const canvas = document.getElementById('regressionChart');
+            const ctx2 = canvas.getContext('2d');
 
             const datasets = [
                 {
@@ -649,7 +707,7 @@
             const minTemp = Math.floor(Math.min(...allTemps) - 2);
             const maxTemp = Math.ceil(Math.max(...allTemps) + 2);
 
-            chart = new Chart(ctx, {
+            chart = new Chart(ctx2, {
                 type: 'scatter',
                 data: { datasets },
                 options: {
@@ -1000,6 +1058,134 @@
             } catch (error) {
                 console.error('Error recalculating regression:', error);
                 alert('Error recalculating regression. Please try again.');
+            }
+        }
+
+        // Date filtering functions
+        function applyDateFilter() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            const filterMessage = document.getElementById('filterMessage');
+            
+            // Clear any previous messages
+            filterMessage.textContent = '';
+            
+            // Validate that both dates are provided
+            if (!startDateInput || !endDateInput) {
+                filterMessage.textContent = 'Please select both start and end dates';
+                return;
+            }
+            
+            const startDate = new Date(startDateInput);
+            const endDate = new Date(endDateInput);
+            
+            // Validate that start date is not after end date
+            if (startDate > endDate) {
+                filterMessage.textContent = 'Invalid date';
+                return;
+            }
+            
+            // Store filter settings
+            dateFilter.startDate = startDate;
+            dateFilter.endDate = endDate;
+            dateFilter.isActive = true;
+            
+            // Apply the filter
+            applyFilter();
+        }
+        
+        function resetDateFilter() {
+            const filterMessage = document.getElementById('filterMessage');
+            
+            // Clear filter settings
+            dateFilter.startDate = null;
+            dateFilter.endDate = null;
+            dateFilter.isActive = false;
+            
+            // Clear input fields
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            
+            // Clear message
+            filterMessage.textContent = '';
+            
+            // Restore original data
+            currentData.actual = JSON.parse(JSON.stringify(originalData.actual));
+            currentData.regression = JSON.parse(JSON.stringify(originalData.regression));
+            
+            // Recalculate regression with all data
+            recalculateRegressionForFiltered(currentData.actual);
+        }
+        
+        function applyFilter() {
+            if (!dateFilter.isActive) return;
+            
+            // Filter actual data points based on date range
+            const filteredActual = originalData.actual.filter(point => {
+                // Convert day number to date (assuming June 2024)
+                const pointDate = new Date(2024, 5, point.x); // Month is 0-indexed
+                return pointDate >= dateFilter.startDate && pointDate <= dateFilter.endDate;
+            });
+            
+            // Check if there's any data in the filtered range
+            if (filteredActual.length === 0) {
+                // Show empty state
+                currentData.actual = [];
+                currentData.regression = [];
+                
+                // Update UI to show empty state
+                updateUI({
+                    actual: [],
+                    regression: [],
+                    slope: '0.00',
+                    r_squared: '0.00',
+                    equation: 'No data available'
+                });
+                
+                createChart();
+                return;
+            }
+            
+            // Update current data with filtered data
+            currentData.actual = filteredActual;
+            
+            // Recalculate regression for the filtered data
+            recalculateRegressionForFiltered(filteredActual);
+        }
+        
+        async function recalculateRegressionForFiltered(dataPoints) {
+            if (dataPoints.length === 0) {
+                currentData.regression = [];
+                createChart();
+                return;
+            }
+            
+            try {
+                // Send filtered data to server for regression calculation
+                const response = await fetch('/api/recalculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        data: dataPoints
+                    })
+                });
+
+                const result = await response.json();
+
+                // Update regression line with filtered data
+                currentData.regression = result.regression;
+                
+                // Update UI with new stats
+                updateUI(result);
+                createChart();
+
+            } catch (error) {
+                console.error('Error recalculating regression for filtered data:', error);
+                // Fall back to showing data without regression line
+                currentData.regression = [];
+                createChart();
             }
         }
 
