@@ -363,6 +363,41 @@
             padding: 8px 15px;
             font-size: 0.9em;
         }
+
+        /* Download button styles */
+        .download-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .download-btn:active {
+            transform: translateY(0);
+        }
+
+        .download-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -394,6 +429,10 @@
         <div class="card">
             <h2>Temperature Trend</h2>
             <div class="chart-container" id="chartContainer" style="position: relative;">
+                <button class="download-btn" id="downloadBtn" onclick="downloadChartAsJPEG()">
+                    <span>📥</span>
+                    <span>Download JPEG</span>
+                </button>
                 <canvas id="regressionChart"></canvas>
             </div>
             
@@ -1000,6 +1039,48 @@
             } catch (error) {
                 console.error('Error recalculating regression:', error);
                 alert('Error recalculating regression. Please try again.');
+            }
+        }
+
+        // Download chart as JPEG
+        function downloadChartAsJPEG() {
+            try {
+                // Check if chart exists and is rendered
+                if (!chart) {
+                    showNotification('Chart has not been rendered yet. Please wait for the chart to load.', 'error');
+                    return;
+                }
+
+                // Verify the chart canvas is ready
+                const canvas = document.getElementById('regressionChart');
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                    showNotification('Chart cannot be downloaded. Please ensure the chart is fully rendered.', 'error');
+                    return;
+                }
+
+                // Convert chart to high-quality JPEG (0.95 quality)
+                // This preserves all styles, colors, labels, and legends
+                const imageData = chart.toBase64Image('image/jpeg', 0.95);
+                
+                // Create a temporary link element
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageData;
+                
+                // Generate filename with timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                downloadLink.download = `cajiva-temperature-chart-${timestamp}.jpeg`;
+                
+                // Trigger download
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Show success notification
+                showNotification('Chart downloaded successfully as JPEG', 'success');
+                
+            } catch (error) {
+                console.error('Error downloading chart:', error);
+                showNotification('Unable to download chart. Please try again.', 'error');
             }
         }
 
