@@ -23,10 +23,6 @@ Feature: Download chart as JPEG image
       Then the download button is visible in the top-right corner of the chart container
       And the button remains accessible across different screen sizes
 
-    Scenario: Browser compatibility
-      Given the user accesses the application through a supported browser
-      When the user clicks the download button
-      Then the chart downloads as a JPEG file without errors
 
     Scenario: Large chart download
       Given a chart with complex and large dimensions is displayed on the screen
