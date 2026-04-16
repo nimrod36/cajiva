@@ -15,7 +15,7 @@ Feature: Dynamic Date Range Filtering
     Scenario: User selects a date range with no data available
       When the user selects a start date and an end date with no data in the range
       Then the chart updates to display an empty state
-      And the message "No data available for this range" is shown
+      And the message "No data available" is shown
 
   Rule: The filter must be reversible
     Scenario: User resets the date filter
@@ -28,7 +28,7 @@ Feature: Dynamic Date Range Filtering
     Scenario: User selects a start date after the end date
       When the user selects a start date that is later than the end date
       Then the system prevents the action
-      And an error message "Invalid date range selected" is displayed
+      And an error message "Invalid date" is displayed
 
   Rule: Boundary conditions must be supported
     Scenario: User selects the smallest possible date range
